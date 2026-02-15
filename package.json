@@ -1,0 +1,31 @@
+{
+  "name": "dataclean-ai",
+  "version": "0.1.0",
+  "description": "AI 原生数据清洗桌面工具",
+  "main": "index.js",
+  "scripts": {
+    "dev": "echo 'Development server not configured yet'",
+    "test": "echo 'Tests not configured yet'",
+    "lint": "echo 'Linter not configured yet'",
+    "release": "standard-version",
+    "release:minor": "standard-version --release-as minor",
+    "release:major": "standard-version --release-as major"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cindeboss/Aidata.git"
+  },
+  "keywords": [
+    "ai",
+    "data-cleaning",
+    "excel",
+    "csv",
+    "automation"
+  ],
+  "author": "cindeboss",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cindeboss/Aidata/issues"
+  },
+  "homepage": "https://github.com/cindeboss/Aidata#readme"
+}
