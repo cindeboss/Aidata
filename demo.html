@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DataClean AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-canvas: #f8f9fa;
+      --bg-white: #ffffff;
+      --bg-gray: #f4f4f5;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --border: #e5e7eb;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-canvas);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .app-container {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* 白板区域 */
+    .canvas-area {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg-canvas);
+      cursor: grab;
+    }
+
+    .canvas-area:active {
+      cursor: grabbing;
+    }
+
+    .canvas-area::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(#f0f0f0 1px, transparent 1px),
+        linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+    }
+
+    .canvas-content {
+      position: absolute;
+      transform-origin: 0 0;
+      will-change: transform;
+    }
+
+    /* 文件卡片 */
+    .file-card {
+      position: absolute;
+      background: var(--bg-white);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--border);
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+      overflow: hidden;
+      cursor: move;
+    }
+
+    .file-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: var(--accent);
+    }
+
+    .file-card.hovering {
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+
+    .file-card.highlight {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    .file-card.dragging {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      z-index: 100;
+      transition: none;
+    }
+
+    /* 对齐线 */
+    #alignmentLines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3000px;
+      height: 3000px;
+      pointer-events: none;
+      z-index: 99;
+      overflow: visible;
+      transform-origin: 0 0;
+    }
+
+    .alignment-line-h, .alignment-line-v {
+      stroke: #6366f1;
+      stroke-width: 1;
+      stroke-dasharray: 4 4;
+      fill: none;
+    }
+
+    .card-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-icon {
+      display: none;
+    }
+
+    .card-meta {
+      font-size: 16px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* 迷你卡片 */
+    .file-card.mini {
+      width: 156px;
+      padding: 8px 10px;
+    }
+
+    .file-card.mini .card-header {
+      padding: 0;
+      border: none;
+      margin-bottom: 4px;
+    }
+
+    .file-card.mini .card-title {
+      font-size: inherit;
+    }
+
+    .file-card.mini .card-meta {
+      font-size: inherit;
+    }
+
+    .file-card.mini .sheet-list {
+      margin-top: 4px;
+    }
+
+    .file-card.mini .sheet-item {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 摘要卡片 */
+    .file-card.summary {
+      width: 234px;
+    }
+
+    .file-card.summary .card-header {
+      padding: 8px 10px;
+      margin-bottom: 0;
+    }
+
+    .file-card.summary .card-title {
+      font-size: inherit;
+    }
+
+    .file-card.summary .card-meta {
+      font-size: inherit;
+    }
+
+    .file-card.summary .sheet-list {
+      padding: 0 10px 8px;
+    }
+
+    .file-card.summary .sheet-item {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 2px 0;
+    }
+
+    .sheet-list {
+      font-size: inherit;
+    }
+
+    .sheet-item {
+      color: var(--text-secondary);
+    }
+
+    /* 预览卡片 */
+    .file-card.preview {
+      width: 520px;
+    }
+
+    .card-table {
+      padding: 0 12px 12px;
+    }
+
+    .preview-table {
+      width: max-content;
+      min-width: 100%;
+      font-size: inherit;
+      border-collapse: collapse;
+    }
+
+    .preview-table th,
+    .preview-table td {
+      padding: 6px 10px;
+      text-align: left;
+      border-bottom: 1px solid #f3f4f6;
+      white-space: nowrap;
+    }
+
+    .preview-table th {
+      color: var(--text-secondary);
+      font-weight: 500;
+      background: #f9fafb;
+      position: sticky;
+      top: 0;
+    }
+
+    .preview-table tr:hover td {
+      background: #f9fafb;
+    }
+
+    .preview-table tr.highlight-row td {
+      background: #fef3c7;
+    }
+
+    .preview-table td.highlight-cell {
+      background: #fee2e2;
+      color: #ef4444;
+      font-weight: 500;
+    }
+
+    /* 完整卡片 */
+    .file-card.full {
+      width: 676px;
+    }
+
+    .sheet-tabs {
+      display: flex;
+      padding: 0 12px;
+      background: #f9fafb;
+      border-bottom: 1px solid #f3f4f6;
+      gap: 4px;
+    }
+
+    .sheet-tab {
+      padding: 8px 14px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: inherit;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      font-weight: 500;
+    }
+
+    .sheet-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .sheet-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .table-body {
+      max-height: 240px;
+      overflow: auto;
+    }
+
+    .full-table {
+      width: max-content;
+      min-width: 100%;
+      font-size: inherit;
+      border-collapse: collapse;
+    }
+
+    .full-table th,
+    .full-table td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid #f3f4f6;
+      white-space: nowrap;
+    }
+
+    .full-table th {
+      background: #f9fafb;
+      position: sticky;
+      top: 0;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .full-table th.highlight-col {
+      background: #eef2ff;
+      color: var(--accent);
+    }
+
+    .full-table tr.highlight-row td {
+      background: #fef3c7;
+    }
+
+    .full-table td.highlight-cell {
+      background: #fee2e2;
+      color: #ef4444;
+      font-weight: 500;
+    }
+
+    .score-bar {
+      width: 80px;
+      height: 6px;
+      background: #e5e7eb;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .score-fill {
+      height: 100%;
+      background: #22c55e;
+      border-radius: 3px;
+    }
+
+    .sheet-tabs {
+      display: flex;
+      padding: 0 16px;
+      background: #f9fafb;
+      border-bottom: 1px solid #f3f4f6;
+      gap: 4px;
+    }
+
+    .sheet-tab {
+      padding: 10px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      font-weight: 500;
+    }
+
+    .sheet-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .sheet-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .table-body {
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    .full-table {
+      width: 100%;
+      font-size: 13px;
+      border-collapse: collapse;
+    }
+
+    .full-table th,
+    .full-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .full-table th {
+      background: #f9fafb;
+      position: sticky;
+      top: 0;
+      font-weight: 500;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .full-table th.highlight-col {
+      background: #eef2ff;
+      color: var(--accent);
+    }
+
+    .full-table tr.highlight-row td {
+      background: #fef3c7;
+    }
+
+    .full-table td.highlight-cell {
+      background: #fee2e2;
+      color: #ef4444;
+      font-weight: 500;
+    }
+
+    /* 数据流连线 */
+    .flow-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3000px;
+      height: 3000px;
+      pointer-events: none;
+      z-index: 1;
+      overflow: visible;
+      transform-origin: 0 0;
+    }
+
+    .flow-line {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 2;
+      opacity: 0.6;
+    }
+
+    .flow-line-animated {
+      stroke-dasharray: 8 4;
+      animation: flowDash 1s linear infinite;
+    }
+
+    @keyframes flowDash {
+      to {
+        stroke-dashoffset: -12;
+      }
+    }
+
+    .flow-arrow {
+      fill: var(--accent);
+    }
+
+    .flow-label {
+      fill: #6b7280;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .flow-label-bg {
+      fill: white;
+    }
+
+    /* 缩放控件 */
+    .zoom-control {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: var(--bg-white);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border);
+      padding: 4px;
+      z-index: 50;
+    }
+
+    .zoom-btn {
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .zoom-btn:hover {
+      background: #f3f4f6;
+      color: var(--text-primary);
+    }
+
+    .zoom-value {
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      min-width: 50px;
+      text-align: center;
+    }
+
+    /* AI 对话面板 */
+    .ai-panel {
+      width: 380px;
+      min-width: 300px;
+      max-width: 50vw;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      margin: 16px;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    }
+
+    .ai-panel-resize-handle {
+      position: absolute;
+      left: -3px;
+      top: 16px;
+      bottom: 16px;
+      width: 6px;
+      cursor: col-resize;
+      z-index: 10;
+      border-radius: 3px;
+    }
+
+    .ai-panel-resize-handle:hover {
+      background: linear-gradient(90deg, rgba(99, 102, 241, 0.3) 0%, transparent 100%);
+    }
+
+    .ai-panel-resize-handle.dragging {
+      background: linear-gradient(90deg, rgba(99, 102, 241, 0.5) 0%, transparent 100%);
+    }
+
+    /* 对话区域 */
+    .chat-toolbar {
+      padding: 6px 12px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    .chat-toolbar-btn {
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: #9ca3af;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 0.15s;
+    }
+
+    .chat-toolbar-btn:hover {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+
+    .chat-toolbar-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .chat-toolbar-btn .tooltip {
+      position: absolute;
+      bottom: -28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2937;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s;
+      z-index: 100;
+    }
+
+    .chat-toolbar-btn .tooltip::before {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-bottom: 4px solid #1f2937;
+    }
+
+    .chat-toolbar-btn:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .chat-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* 消息气泡 */
+    .message {
+      max-width: 100%;
+      padding: 12px 16px;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .message.ai {
+      background: transparent;
+      border-radius: 18px;
+      align-self: flex-start;
+      color: #1f2937;
+    }
+
+    .message.user {
+      background: #f4f4f5;
+      border-radius: 18px;
+      border-bottom-right-radius: 4px;
+      align-self: flex-end;
+      color: #1f2937;
+    }
+
+    .message .mention {
+      color: #6366f1;
+      font-weight: 500;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .message .mention:hover {
+      color: #4f46e5;
+    }
+
+    /* 快捷操作按钮 */
+    .message-actions {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: #ffffff;
+      border: none;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      transition: all 0.15s;
+    }
+
+    .action-btn:hover {
+      background: #f9fafb;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-btn .emoji {
+      font-size: 14px;
+    }
+
+    /* 输入区域 */
+    .input-area {
+      padding: 12px 16px;
+      background: #ffffff;
+      border-radius: 0 0 16px 16px;
+    }
+
+    .input-container {
+      display: flex;
+      align-items: flex-end;
+      background: #f4f4f5;
+      border-radius: 16px;
+      padding: 8px 8px 8px 12px;
+      gap: 8px;
+    }
+
+    .input-action-btn {
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      color: #9ca3af;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .input-action-btn:hover {
+      color: #6b7280;
+    }
+
+    .input-action-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .input-container textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 6px 4px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #1f2937;
+      outline: none;
+      resize: none;
+      min-height: 60px;
+      line-height: 1.5;
+    }
+
+    .input-container textarea::placeholder {
+      color: #9ca3af;
+    }
+
+    .send-btn {
+      width: 36px;
+      height: 36px;
+      background: #6366f1;
+      border: none;
+      border-radius: 50%;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover {
+      background: #4f46e5;
+    }
+
+    .send-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* 拖拽上传 */
+    .drop-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .drop-overlay.active {
+      display: flex;
+    }
+
+    .drop-content {
+      text-align: center;
+      padding: 60px;
+      border: 2px dashed var(--accent);
+      border-radius: 16px;
+      background: #eef2ff;
+    }
+
+    .drop-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .drop-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .drop-hint {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* 右键菜单 */
+    .context-menu {
+      position: fixed;
+      background: var(--bg-white);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: 1px solid var(--border);
+      padding: 6px;
+      min-width: 180px;
+      z-index: 500;
+      display: none;
+    }
+
+    .context-menu.visible {
+      display: block;
+    }
+
+    .context-menu-item {
+      padding: 10px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-primary);
+      border-radius: 6px;
+    }
+
+    .context-menu-item:hover {
+      background: #f3f4f6;
+    }
+
+    .context-menu-item .icon {
+      width: 18px;
+      color: var(--text-secondary);
+    }
+
+    .context-menu-divider {
+      height: 1px;
+      background: #f3f4f6;
+      margin: 6px 0;
+    }
+
+    /* 滚动条 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #e5e7eb;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 白板画布 -->
+    <div class="canvas-area" id="canvasArea">
+      <svg class="flow-lines" id="flowLines"></svg>
+      <div class="canvas-content" id="canvasContent"></div>
+      <svg id="alignmentLines"></svg>
+      <div class="zoom-control">
+        <button class="zoom-btn" onclick="zoomOut()">−</button>
+        <span class="zoom-value" id="zoomLevel">43%</span>
+        <button class="zoom-btn" onclick="zoomIn()">+</button>
+      </div>
+    </div>
+
+    <!-- AI 对话面板 -->
+    <div class="ai-panel" id="aiPanel">
+      <div class="ai-panel-resize-handle" id="resizeHandle"></div>
+
+      <!-- 工具栏 -->
+      <div class="chat-toolbar">
+        <button class="chat-toolbar-btn" onclick="newChat()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span class="tooltip">New Chat</span>
+        </button>
+        <button class="chat-toolbar-btn" onclick="showHistory()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span class="tooltip">History</span>
+        </button>
+      </div>
+
+      <!-- 对话区域 -->
+      <div class="chat-area" id="chatArea">
+        <div class="message ai">
+          I see you're hovering over <span class="mention" onclick="highlightCard('sales')">sales_data.xlsx</span>. Is this your main data file? I found 3 sheets inside.
+          <div class="message-actions">
+            <button class="action-btn" onclick="quickReply('Yes, this is the main file')"><span class="emoji">✅</span> Yes, that's correct</button>
+            <button class="action-btn" onclick="quickReply('Let me explain the structure')"><span class="emoji">🔄</span> Try again</button>
+          </div>
+        </div>
+
+        <div class="message user">
+          Yes, this is the main file. "Summary" is the overview, and "Detail-A" & "Detail-B" are category breakdowns.
+        </div>
+
+        <div class="message ai">
+          Got it! I've noted the relationship between <span class="mention" onclick="switchSheet('summary')">Summary</span> and <span class="mention" onclick="switchSheet('detail-a')">Detail sheets</span>.
+          <br><br>
+          I calculated the totals for the <span class="mention" onclick="highlightColumn('amount')">Amount column</span>:
+          <br>• Detail-A total: ¥398,500
+          <br>• Summary A category: ¥400,000
+          <br><br>
+          <strong>Difference: ¥1,500</strong> - Are these 2 negative records returns?
+          <div class="message-actions">
+            <button class="action-btn" onclick="quickReply('Yes, they are returns')"><span class="emoji">✅</span> Yes, they're returns</button>
+            <button class="action-btn" onclick="quickReply('This is a data error')"><span class="emoji">⚠️</span> This is an error</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 输入区域 -->
+      <div class="input-area">
+        <div class="input-container">
+          <button class="input-action-btn" title="Add attachment">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <textarea id="userInput" placeholder="Send message..." rows="3"></textarea>
+          <button class="send-btn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 拖拽上传 -->
+    <div class="drop-overlay" id="dropOverlay">
+      <div class="drop-content">
+        <div class="drop-icon">📁</div>
+        <div class="drop-text">Drop files here</div>
+        <div class="drop-hint">Supports CSV, Excel, JSON</div>
+      </div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div class="context-menu" id="contextMenu">
+      <div class="context-menu-item" onclick="askAboutThis()">
+        <span class="icon">❓</span> Ask about this cell
+      </div>
+      <div class="context-menu-item" onclick="highlightThis()">
+        <span class="icon">🔍</span> Highlight this area
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 画布状态
+    let scale = 0.43;
+    let panX = 80;
+    let panY = 60;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let hoverTimer = null;
+
+    const canvasArea = document.getElementById('canvasArea');
+    const canvasContent = document.getElementById('canvasContent');
+    const flowLines = document.getElementById('flowLines');
+    const alignmentLines = document.getElementById('alignmentLines');
+
+    // 文件数据
+    const files = [
+      { id: 'sales', name: 'sales_data.xlsx', type: 'excel', rows: 1000, quality: 95, position: { x: 60, y: 60 } },
+      { id: 'orders', name: 'orders_2024.xlsx', type: 'excel', rows: 2500, quality: 92, position: { x: 60, y: 280 } },
+      { id: 'cleaned', name: 'cleaned_data.csv', type: 'csv', rows: 950, quality: 100, position: { x: 300, y: 120 } },
+      { id: 'merged', name: 'merged_output.xlsx', type: 'excel', rows: 3400, quality: 98, position: { x: 540, y: 180 } }
+    ];
+
+    const flows = [
+      { from: 'sales', to: 'cleaned', label: 'Clean', change: '-50 rows' },
+      { from: 'orders', to: 'merged', label: 'Merge', change: '' },
+      { from: 'cleaned', to: 'merged', label: 'Join', change: '' }
+    ];
+
+    function init() {
+      renderCards();
+      renderFlowLines();
+      updateTransform();
+      setupEventListeners();
+    }
+
+    function getDisplayMode(scale) {
+      if (scale < 0.3) return 'mini';
+      if (scale < 0.5) return 'summary';
+      if (scale < 0.7) return 'preview';
+      return 'full';
+    }
+
+    // 移除文件扩展名
+    function removeExtension(filename) {
+      return filename.replace(/\.(xlsx|csv|json)$/i, '');
+    }
+
+    // 获取动态字体大小（14px / scale * 80%）
+    function getDynamicFontSize() {
+      return Math.round(14 / scale * 0.8);
+    }
+
+    // 文件的 sheet 信息
+    const fileSheets = {
+      'sales': ['Summary', 'Detail-A', 'Detail-B'],
+      'orders': ['Orders', 'Returns'],
+      'cleaned': ['Cleaned'],
+      'merged': ['Merged']
+    };
+
+    function renderCards() {
+      const fontSize = getDynamicFontSize();
+      const fontStyles = `font-size: ${fontSize}px; line-height: 1.4;`;
+
+      canvasContent.innerHTML = files.map(file => {
+        const mode = getDisplayMode(scale);
+        const pos = `left: ${file.position.x}px; top: ${file.position.y}px;`;
+        const displayName = removeExtension(file.name);
+        const sheets = fileSheets[file.id] || ['Sheet1'];
+        const sheetsHTML = sheets.map(s => `<div class="sheet-item">${s}</div>`).join('');
+
+        if (mode === 'mini') {
+          return `<div class="file-card mini" id="card-${file.id}" style="${pos} ${fontStyles}" data-id="${file.id}" onmouseenter="onCardHover('${file.id}', event)" onmouseleave="onCardLeave('${file.id}')">
+            <div class="card-header"><div class="card-title">${displayName}</div></div>
+            <div class="sheet-list">${sheetsHTML}</div>
+          </div>`;
+        }
+
+        if (mode === 'summary') {
+          return `<div class="file-card summary" id="card-${file.id}" style="${pos} ${fontStyles}" data-id="${file.id}" onmouseenter="onCardHover('${file.id}', event)" onmouseleave="onCardLeave('${file.id}')">
+            <div class="card-header"><div class="card-title">${displayName}</div></div>
+            <div class="sheet-list">${sheetsHTML}</div>
+          </div>`;
+        }
+
+        if (mode === 'preview') {
+          return `<div class="file-card preview" id="card-${file.id}" style="${pos} ${fontStyles}" data-id="${file.id}" onmouseenter="onCardHover('${file.id}', event)" onmouseleave="onCardLeave('${file.id}')">
+            <div class="card-header"><div class="card-title">${displayName}</div></div>
+            <div class="card-table"><table class="preview-table"><thead><tr><th>Category</th><th>Amount</th><th>Count</th></tr></thead>
+            <tbody><tr><td>A</td><td>400,000</td><td>100</td></tr><tr><td>B</td><td>350,000</td><td>80</td></tr><tr><td>C</td><td>250,000</td><td>60</td></tr><tr class="highlight-row"><td>A Return</td><td class="highlight-cell">-1,500</td><td>2</td></tr></tbody></table></div></div>`;
+        }
+
+        return `<div class="file-card full" id="card-${file.id}" style="${pos} ${fontStyles}" data-id="${file.id}" onmouseenter="onCardHover('${file.id}', event)" onmouseleave="onCardLeave('${file.id}')">
+          <div class="card-header"><div class="card-title">${displayName}</div></div>
+          <div class="sheet-tabs"><button class="sheet-tab active">Summary</button><button class="sheet-tab">Detail-A</button><button class="sheet-tab">Detail-B</button></div>
+          <div class="table-body"><table class="full-table"><thead><tr><th>#</th><th>Category</th><th class="highlight-col">Amount</th><th>Count</th><th>Date</th></tr></thead>
+          <tbody><tr><td>1</td><td>A</td><td>400,000</td><td>100</td><td>2024-01-15</td></tr><tr><td>2</td><td>B</td><td>350,000</td><td>80</td><td>2024-01-15</td></tr><tr><td>3</td><td>C</td><td>250,000</td><td>60</td><td>2024-01-15</td></tr><tr class="highlight-row"><td>4</td><td>A Return</td><td class="highlight-cell">-1,500</td><td>2</td><td>2024-01-16</td></tr><tr class="highlight-row"><td>5</td><td>B Return</td><td class="highlight-cell">-800</td><td>1</td><td>2024-01-17</td></tr><tr><td>6</td><td>D</td><td>180,000</td><td>40</td><td>2024-01-18</td></tr></tbody></table></div></div>`;
+      }).join('');
+
+      // 添加拖拽事件
+      setupCardDrag();
+    }
+
+    // 卡片拖拽相关变量
+    let isDraggingCard = false;
+    let dragCardId = null;
+    let dragStartCardX = 0;
+    let dragStartCardY = 0;
+    let dragCardStartPosX = 0;
+    let dragCardStartPosY = 0;
+
+    function setupCardDrag() {
+      const cards = document.querySelectorAll('.file-card');
+      cards.forEach(card => {
+        card.addEventListener('mousedown', startCardDrag);
+      });
+    }
+
+    function startCardDrag(e) {
+      if (e.target.closest('.sheet-tab') || e.target.closest('table')) return;
+
+      const card = e.target.closest('.file-card');
+      if (!card) return;
+
+      isDraggingCard = true;
+      dragCardId = card.dataset.id;
+      card.classList.add('dragging');
+
+      dragStartCardX = e.clientX;
+      dragStartCardY = e.clientY;
+
+      const file = files.find(f => f.id === dragCardId);
+      dragCardStartPosX = file.position.x;
+      dragCardStartPosY = file.position.y;
+
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    function handleCardDrag(e) {
+      if (!isDraggingCard) return;
+
+      const file = files.find(f => f.id === dragCardId);
+      const dx = (e.clientX - dragStartCardX) / scale;
+      const dy = (e.clientY - dragStartCardY) / scale;
+
+      file.position.x = dragCardStartPosX + dx;
+      file.position.y = dragCardStartPosY + dy;
+
+      // 更新卡片位置
+      const card = document.getElementById(`card-${dragCardId}`);
+      if (card) {
+        card.style.left = file.position.x + 'px';
+        card.style.top = file.position.y + 'px';
+      }
+
+      // 检测对齐线
+      checkAlignment(dragCardId);
+    }
+
+    function endCardDrag() {
+      if (!isDraggingCard) return;
+
+      const card = document.getElementById(`card-${dragCardId}`);
+      if (card) card.classList.remove('dragging');
+
+      isDraggingCard = false;
+      dragCardId = null;
+
+      // 清除对齐线
+      hideAlignmentLines();
+
+      // 重新绘制连线
+      renderFlowLines();
+    }
+
+    // 对齐检测
+    const ALIGN_THRESHOLD = 5;
+
+    function checkAlignment(cardId) {
+      const currentFile = files.find(f => f.id === cardId);
+      const mode = getDisplayMode(scale);
+      const cardSize = getCardSize(mode);
+
+      const currentRect = {
+        x: currentFile.position.x,
+        y: currentFile.position.y,
+        width: cardSize.width,
+        height: cardSize.height,
+        centerX: currentFile.position.x + cardSize.width / 2,
+        centerY: currentFile.position.y + cardSize.height / 2
+      };
+
+      const lines = [];
+      const LINE_EXTEND = 20; // 线条延伸长度
+
+      files.forEach(file => {
+        if (file.id === cardId) return;
+
+        const rect = {
+          x: file.position.x,
+          y: file.position.y,
+          width: cardSize.width,
+          height: cardSize.height,
+          centerX: file.position.x + cardSize.width / 2,
+          centerY: file.position.y + cardSize.height / 2
+        };
+
+        // 左边对齐
+        if (Math.abs(currentRect.x - rect.x) < ALIGN_THRESHOLD) {
+          lines.push({
+            type: 'vertical',
+            x: rect.x,
+            y1: Math.min(currentRect.y, rect.y) - LINE_EXTEND,
+            y2: Math.max(currentRect.y + currentRect.height, rect.y + rect.height) + LINE_EXTEND
+          });
+          currentFile.position.x = rect.x;
+        }
+
+        // 右边对齐
+        if (Math.abs((currentRect.x + currentRect.width) - (rect.x + rect.width)) < ALIGN_THRESHOLD) {
+          lines.push({
+            type: 'vertical',
+            x: rect.x + rect.width,
+            y1: Math.min(currentRect.y, rect.y) - LINE_EXTEND,
+            y2: Math.max(currentRect.y + currentRect.height, rect.y + rect.height) + LINE_EXTEND
+          });
+          currentFile.position.x = rect.x + rect.width - currentRect.width;
+        }
+
+        // 顶部对齐
+        if (Math.abs(currentRect.y - rect.y) < ALIGN_THRESHOLD) {
+          lines.push({
+            type: 'horizontal',
+            y: rect.y,
+            x1: Math.min(currentRect.x, rect.x) - LINE_EXTEND,
+            x2: Math.max(currentRect.x + currentRect.width, rect.x + rect.width) + LINE_EXTEND
+          });
+          currentFile.position.y = rect.y;
+        }
+
+        // 底部对齐
+        if (Math.abs((currentRect.y + currentRect.height) - (rect.y + rect.height)) < ALIGN_THRESHOLD) {
+          lines.push({
+            type: 'horizontal',
+            y: rect.y + rect.height,
+            x1: Math.min(currentRect.x, rect.x) - LINE_EXTEND,
+            x2: Math.max(currentRect.x + currentRect.width, rect.x + rect.width) + LINE_EXTEND
+          });
+          currentFile.position.y = rect.y + rect.height - currentRect.height;
+        }
+
+        // 中心水平对齐
+        if (Math.abs(currentRect.centerX - rect.centerX) < ALIGN_THRESHOLD) {
+          lines.push({
+            type: 'vertical',
+            x: rect.centerX,
+            y1: Math.min(currentRect.y, rect.y) - LINE_EXTEND,
+            y2: Math.max(currentRect.y + currentRect.height, rect.y + rect.height) + LINE_EXTEND
+          });
+          currentFile.position.x = rect.centerX - currentRect.width / 2;
+        }
+
+        // 中心垂直对齐
+        if (Math.abs(currentRect.centerY - rect.centerY) < ALIGN_THRESHOLD) {
+          lines.push({
+            type: 'horizontal',
+            y: rect.centerY,
+            x1: Math.min(currentRect.x, rect.x) - LINE_EXTEND,
+            x2: Math.max(currentRect.x + currentRect.width, rect.x + rect.width) + LINE_EXTEND
+          });
+          currentFile.position.y = rect.centerY - currentRect.height / 2;
+        }
+      });
+
+      showAlignmentLines(lines);
+
+      // 更新卡片位置
+      const card = document.getElementById(`card-${cardId}`);
+      if (card) {
+        card.style.left = currentFile.position.x + 'px';
+        card.style.top = currentFile.position.y + 'px';
+      }
+    }
+
+    function showAlignmentLines(lines) {
+      const container = document.getElementById('alignmentLines');
+      // 清除现有线条
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+      // 使用 DOM 方法添加线条
+      lines.forEach(line => {
+        const lineEl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        if (line.type === 'horizontal') {
+          lineEl.setAttribute('x1', line.x1);
+          lineEl.setAttribute('y1', line.y);
+          lineEl.setAttribute('x2', line.x2);
+          lineEl.setAttribute('y2', line.y);
+          lineEl.setAttribute('class', 'alignment-line-h');
+        } else {
+          lineEl.setAttribute('x1', line.x);
+          lineEl.setAttribute('y1', line.y1);
+          lineEl.setAttribute('x2', line.x);
+          lineEl.setAttribute('y2', line.y2);
+          lineEl.setAttribute('class', 'alignment-line-v');
+        }
+        container.appendChild(lineEl);
+      });
+    }
+
+    function hideAlignmentLines() {
+      const container = document.getElementById('alignmentLines');
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+    }
+
+    function renderFlowLines() {
+      const mode = getDisplayMode(scale);
+      const cardSize = getCardSize(mode);
+
+      const linesHTML = flows.map(flow => {
+        const fromFile = files.find(f => f.id === flow.from);
+        const toFile = files.find(f => f.id === flow.to);
+
+        // 计算连接点（从卡片右边到卡片左边）
+        const fromX = fromFile.position.x + cardSize.width;
+        const fromY = fromFile.position.y + cardSize.height / 2;
+        const toX = toFile.position.x;
+        const toY = toFile.position.y + cardSize.height / 2;
+
+        // 使用贝塞尔曲线
+        const controlOffset = Math.min(80, Math.abs(toX - fromX) / 3);
+        const controlX1 = fromX + controlOffset;
+        const controlX2 = toX - controlOffset;
+        const midX = (fromX + toX) / 2;
+        const midY = (fromY + toY) / 2;
+
+        return `
+          <path class="flow-line flow-line-animated"
+                d="M ${fromX} ${fromY} C ${controlX1} ${fromY}, ${controlX2} ${toY}, ${toX} ${toY}"
+                marker-end="url(#arrowhead)"/>
+          <rect class="flow-label-bg" x="${midX - 30}" y="${midY - 10}" width="60" height="20" rx="4"/>
+          <text class="flow-label" x="${midX}" y="${midY + 4}" text-anchor="middle">${flow.label}</text>
+        `;
+      }).join('');
+
+      // 不设置 viewBox，直接使用像素坐标
+      flowLines.innerHTML = `
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6366f1"/>
+          </marker>
+        </defs>
+        ${linesHTML}
+      `;
+    }
+
+    function updateTransform() {
+      canvasContent.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+      flowLines.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+      alignmentLines.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+      document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
+
+      // 检测并调整重叠
+      autoAdjustLayout();
+      renderCards();
+      renderFlowLines();
+    }
+
+    // 获取卡片在当前缩放级别下的尺寸
+    function getCardSize(mode) {
+      const sizes = {
+        mini: { width: 156, height: 104 },
+        summary: { width: 234, height: 130 },
+        preview: { width: 520, height: 286 },
+        full: { width: 676, height: 442 }
+      };
+      return sizes[mode] || sizes.summary;
+    }
+
+    // 检测两个矩形是否重叠
+    function isOverlapping(rect1, rect2, padding = 20) {
+      return !(rect1.x + rect1.width + padding < rect2.x ||
+               rect2.x + rect2.width + padding < rect1.x ||
+               rect1.y + rect1.height + padding < rect2.y ||
+               rect2.y + rect2.height + padding < rect1.y);
+    }
+
+    // 自动调整布局避免重叠
+    function autoAdjustLayout() {
+      const mode = getDisplayMode(scale);
+      const cardSize = getCardSize(mode);
+      const padding = 30;
+
+      // 多次迭代调整直到没有重叠
+      for (let iteration = 0; iteration < 10; iteration++) {
+        let hasOverlap = false;
+
+        for (let i = 0; i < files.length; i++) {
+          for (let j = i + 1; j < files.length; j++) {
+            const rect1 = {
+              x: files[i].position.x,
+              y: files[i].position.y,
+              width: cardSize.width,
+              height: cardSize.height
+            };
+            const rect2 = {
+              x: files[j].position.x,
+              y: files[j].position.y,
+              width: cardSize.width,
+              height: cardSize.height
+            };
+
+            if (isOverlapping(rect1, rect2, padding)) {
+              hasOverlap = true;
+
+              // 计算推开方向
+              const dx = rect2.x - rect1.x;
+              const dy = rect2.y - rect1.y;
+              const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+
+              // 推开距离
+              const pushDistance = 40;
+              const pushX = (dx / distance) * pushDistance;
+              const pushY = (dy / distance) * pushDistance;
+
+              // 向两个方向推开
+              files[i].position.x -= pushX / 2;
+              files[i].position.y -= pushY / 2;
+              files[j].position.x += pushX / 2;
+              files[j].position.y += pushY / 2;
+
+              // 确保不超出边界
+              files[i].position.x = Math.max(20, files[i].position.x);
+              files[i].position.y = Math.max(20, files[i].position.y);
+              files[j].position.x = Math.max(20, files[j].position.x);
+              files[j].position.y = Math.max(20, files[j].position.y);
+            }
+          }
+        }
+
+        if (!hasOverlap) break;
+      }
+    }
+
+    function zoomIn() { scale = Math.min(1, scale + 0.1); updateTransform(); }
+    function zoomOut() { scale = Math.max(0.1, scale - 0.1); updateTransform(); }
+
+    function onCardHover(cardId, event) {
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => {
+        const card = document.getElementById(`card-${cardId}`);
+        if (card) card.classList.add('hovering');
+      }, 500);
+    }
+
+    function onCardLeave(cardId) {
+      clearTimeout(hoverTimer);
+      const card = document.getElementById(`card-${cardId}`);
+      if (card) card.classList.remove('hovering');
+    }
+
+    function setupEventListeners() {
+      canvasArea.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        if (e.ctrlKey || e.metaKey) {
+          scale = Math.max(0.1, Math.min(1, scale - e.deltaY * 0.001));
+        } else {
+          panX -= e.deltaX;
+          panY -= e.deltaY;
+        }
+        updateTransform();
+      }, { passive: false });
+
+      canvasArea.addEventListener('mousedown', (e) => {
+        if (e.target === canvasArea || e.target === flowLines) {
+          isDragging = true;
+          dragStartX = e.clientX - panX;
+          dragStartY = e.clientY - panY;
+        }
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (isDragging) { panX = e.clientX - dragStartX; panY = e.clientY - dragStartY; updateTransform(); }
+        if (isDraggingCard) { handleCardDrag(e); }
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+        endCardDrag();
+      });
+
+      canvasArea.addEventListener('dblclick', (e) => {
+        const card = e.target.closest('.file-card');
+        if (card) focusOnCard(card.id.replace('card-', ''));
+      });
+
+      canvasArea.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e.clientX, e.clientY); });
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.context-menu')) { hideContextMenu(); }
+      });
+
+      document.addEventListener('dragenter', (e) => { e.preventDefault(); document.getElementById('dropOverlay').classList.add('active'); });
+      document.addEventListener('dragleave', (e) => { if (e.relatedTarget === null) document.getElementById('dropOverlay').classList.remove('active'); });
+      document.addEventListener('dragover', (e) => e.preventDefault());
+      document.addEventListener('drop', (e) => { e.preventDefault(); document.getElementById('dropOverlay').classList.remove('active'); });
+
+      document.getElementById('userInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      // 对话面板宽度调整
+      const resizeHandle = document.getElementById('resizeHandle');
+      const aiPanel = document.getElementById('aiPanel');
+      let isResizing = false;
+      let startX = 0;
+      let startWidth = 0;
+
+      resizeHandle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = aiPanel.offsetWidth;
+        resizeHandle.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const deltaX = startX - e.clientX;
+        const newWidth = startWidth + deltaX;
+        const minWidth = 300; // 约18个汉字
+        const maxWidth = window.innerWidth / 2;
+        aiPanel.style.width = Math.max(minWidth, Math.min(maxWidth, newWidth)) + 'px';
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isResizing) {
+          isResizing = false;
+          resizeHandle.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+        }
+      });
+    }
+
+    function focusOnCard(fileId) {
+      const file = files.find(f => f.id === fileId);
+      scale = 0.7; panX = 250 - file.position.x; panY = 180 - file.position.y;
+      updateTransform();
+      const card = document.getElementById(`card-${fileId}`);
+      if (card) { card.classList.add('highlight'); setTimeout(() => card.classList.remove('highlight'), 2000); }
+    }
+
+    function highlightCard(fileId) { focusOnCard(fileId); }
+    function highlightColumn(colName) { document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight; }
+    function highlightThis() { hideContextMenu(); addAIMessage('OK, I\'ve highlighted this area. What would you like to do with it?'); }
+    function switchSheet(sheetId) { addAIMessage(`Switched to ${sheetId === 'summary' ? 'Summary' : 'Detail-A'}.`); }
+
+    function showContextMenu(x, y) { const menu = document.getElementById('contextMenu'); menu.style.left = x + 'px'; menu.style.top = y + 'px'; menu.classList.add('visible'); }
+    function hideContextMenu() { document.getElementById('contextMenu').classList.remove('visible'); }
+    function askAboutThis() { hideContextMenu(); addAIMessage('What would you like to know about this cell?'); }
+
+    function sendMessage() {
+      const input = document.getElementById('userInput');
+      const text = input.value.trim();
+      if (!text) return;
+      addUserMessage(text); input.value = '';
+      setTimeout(() => addAIMessage('Got it! Processing your request...', true), 500);
+    }
+
+    function quickReply(text) {
+      addUserMessage(text);
+      setTimeout(() => {
+        if (text.includes('returns') || text.includes('Yes')) addAIMessage('Great! I\'ve noted that negative amounts represent returns. Data validation passed! Anything else?');
+        else addAIMessage('Understood. I\'ll flag these anomalies for further review.');
+      }, 600);
+    }
+
+    function addUserMessage(text) {
+      const chatArea = document.getElementById('chatArea');
+      const msg = document.createElement('div');
+      msg.className = 'message user';
+      msg.textContent = text;
+      chatArea.appendChild(msg);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function addAIMessage(text, withActions = false) {
+      const chatArea = document.getElementById('chatArea');
+      const msg = document.createElement('div');
+      msg.className = 'message ai';
+      msg.innerHTML = text;
+      if (withActions) msg.innerHTML += `<div class="message-actions"><button class="action-btn" onclick="quickReply('Continue')"><span class="emoji">▶️</span> Continue</button><button class="action-btn" onclick="quickReply('Export')"><span class="emoji">📤</span> Export data</button></div>`;
+      chatArea.appendChild(msg);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function newChat() {
+      const chatArea = document.getElementById('chatArea');
+      chatArea.innerHTML = `<div class="message ai">Hello! I'm ready to help you clean and analyze your data. What would you like to do today?</div>`;
+    }
+
+    function showHistory() {
+      alert('Chat history feature coming soon!');
+    }
+
+    init();
+  </script>
+</body>
+</html>
