@@ -87,7 +87,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # AI 代码审查（使用 Claude API）
+  # AI 代码审查（使用 Kimi API）
   ai-review:
     runs-on: ubuntu-latest
     needs: lint
@@ -103,40 +103,45 @@ jobs:
           git diff origin/main...HEAD > diff.txt
           echo "files=$(git diff --name-only origin/main...HEAD | tr '\n' ' ')" >> $GITHUB_OUTPUT
 
-      - name: AI Code Review
-        if: env.ANTHROPIC_API_KEY != ''
+      - name: AI Code Review with Kimi
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
         run: |
-          echo "🤖 Running AI code review..."
+          echo "🤖 Running AI code review with Kimi..."
 
-          REVIEW=$(curl -s https://api.anthropic.com/v1/messages \
+          DIFF_CONTENT=$(cat diff.txt | head -200 | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+
+          REVIEW=$(curl -s https://api.moonshot.cn/v1/chat/completions \
             -H "Content-Type: application/json" \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
-            -H "anthropic-version: 2023-06-01" \
+            -H "Authorization: Bearer $KIMI_API_KEY" \
             -d '{
-              "model": "claude-3-sonnet-20240229",
-              "max_tokens": 1024,
+              "model": "moonshot-v1-8k",
+              "temperature": 0.3,
               "messages": [{
+                "role": "system",
+                "content": "你是一位专业的代码审查专家。请用中文审查代码变更，提供简洁的反馈，包括：1. 潜在问题 2. 改进建议 3. 代码质量评价"
+              }, {
                 "role": "user",
-                "content": "请审查以下代码变更，提供简洁的反馈和建议：\n\n'"$(cat diff.txt | head -100)"'"
+                "content": "请审查以下代码变更：\n\n'"$DIFF_CONTENT"'"
               }]
-            }' 2>/dev/null || echo "API call failed")
+            }')
 
-          echo "$REVIEW" > review.md
+          echo "$REVIEW" | jq -r '.choices[0].message.content' > review.md || echo "API call failed" > review.md
 
       - name: Post Review Comment
-        if: hashFiles('review.md') != ''
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const review = fs.readFileSync('review.md', 'utf8');
+            let review = fs.readFileSync('review.md', 'utf8');
+            if (review.includes('API call failed')) {
+              review = '代码审查暂时不可用，请稍后重试。';
+            }
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `## 🤖 AI 代码审查\n\n${review}`
+              body: `## 🤖 Kimi AI 代码审查\n\n${review}`
             });
 
   # 自动 PR（定期从 develop 合并到 main）
