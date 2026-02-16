@@ -2,14 +2,16 @@
   "name": "dataclean-ai",
   "version": "0.1.0",
   "description": "AI 原生数据清洗桌面工具",
-  "main": "index.js",
+  "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "echo 'Development server not configured yet'",
-    "test": "echo 'Tests not configured yet'",
-    "lint": "echo 'Linter not configured yet'",
-    "release": "standard-version",
-    "release:minor": "standard-version --release-as minor",
-    "release:major": "standard-version --release-as major"
+    "dev": "vite",
+    "build": "tsc && vite build && npm run build:electron",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "preview": "vite preview",
+    "electron": "electron .",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "test": "vitest",
+    "lint": "eslint src --ext ts,tsx"
   },
   "repository": {
     "type": "git",
@@ -20,12 +22,37 @@
     "data-cleaning",
     "excel",
     "csv",
-    "automation"
+    "automation",
+    "bi"
   ],
   "author": "cindeboss",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/cindeboss/Aidata/issues"
   },
-  "homepage": "https://github.com/cindeboss/Aidata#readme"
+  "homepage": "https://github.com/cindeboss/Aidata#readme",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zustand": "^4.5.0",
+    "xlsx": "^0.18.5",
+    "papaparse": "^5.4.1",
+    "uuid": "^9.0.0",
+    "electron-store": "^8.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/papaparse": "^5.3.14",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@types/uuid": "^9.0.7",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10",
+    "vitest": "^1.1.0",
+    "wait-on": "^7.2.0"
+  }
 }
