@@ -148,36 +148,6 @@
       white-space: nowrap;
     }
 
-    /* 迷你卡片 */
-    .file-card.mini {
-      width: 156px;
-      padding: 8px 10px;
-    }
-
-    .file-card.mini .card-header {
-      padding: 0;
-      border: none;
-      margin-bottom: 4px;
-    }
-
-    .file-card.mini .card-title {
-      font-size: inherit;
-    }
-
-    .file-card.mini .card-meta {
-      font-size: inherit;
-    }
-
-    .file-card.mini .sheet-list {
-      margin-top: 4px;
-    }
-
-    .file-card.mini .sheet-item {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
     /* 摘要卡片 */
     .file-card.summary {
       width: 234px;
@@ -215,141 +185,9 @@
       color: var(--text-secondary);
     }
 
-    /* 预览卡片 */
-    .file-card.preview {
-      width: 520px;
-    }
-
-    .card-table {
-      padding: 0 12px 12px;
-    }
-
-    .preview-table {
-      width: max-content;
-      min-width: 100%;
-      font-size: inherit;
-      border-collapse: collapse;
-    }
-
-    .preview-table th,
-    .preview-table td {
-      padding: 6px 10px;
-      text-align: left;
-      border-bottom: 1px solid #f3f4f6;
-      white-space: nowrap;
-    }
-
-    .preview-table th {
-      color: var(--text-secondary);
-      font-weight: 500;
-      background: #f9fafb;
-      position: sticky;
-      top: 0;
-    }
-
-    .preview-table tr:hover td {
-      background: #f9fafb;
-    }
-
-    .preview-table tr.highlight-row td {
-      background: #fef3c7;
-    }
-
-    .preview-table td.highlight-cell {
-      background: #fee2e2;
-      color: #ef4444;
-      font-weight: 500;
-    }
-
     /* 完整卡片 */
     .file-card.full {
       width: 676px;
-    }
-
-    .sheet-tabs {
-      display: flex;
-      padding: 0 12px;
-      background: #f9fafb;
-      border-bottom: 1px solid #f3f4f6;
-      gap: 4px;
-    }
-
-    .sheet-tab {
-      padding: 8px 14px;
-      background: transparent;
-      border: none;
-      color: var(--text-secondary);
-      font-size: inherit;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      font-weight: 500;
-    }
-
-    .sheet-tab:hover {
-      color: var(--text-primary);
-    }
-
-    .sheet-tab.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }
-
-    .table-body {
-      max-height: 240px;
-      overflow: auto;
-    }
-
-    .full-table {
-      width: max-content;
-      min-width: 100%;
-      font-size: inherit;
-      border-collapse: collapse;
-    }
-
-    .full-table th,
-    .full-table td {
-      padding: 8px 12px;
-      text-align: left;
-      border-bottom: 1px solid #f3f4f6;
-      white-space: nowrap;
-    }
-
-    .full-table th {
-      background: #f9fafb;
-      position: sticky;
-      top: 0;
-      font-weight: 500;
-      color: var(--text-secondary);
-    }
-
-    .full-table th.highlight-col {
-      background: #eef2ff;
-      color: var(--accent);
-    }
-
-    .full-table tr.highlight-row td {
-      background: #fef3c7;
-    }
-
-    .full-table td.highlight-cell {
-      background: #fee2e2;
-      color: #ef4444;
-      font-weight: 500;
-    }
-
-    .score-bar {
-      width: 80px;
-      height: 6px;
-      background: #e5e7eb;
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .score-fill {
-      height: 100%;
-      background: #22c55e;
-      border-radius: 3px;
     }
 
     .sheet-tabs {
@@ -383,11 +221,12 @@
 
     .table-body {
       max-height: 240px;
-      overflow-y: auto;
+      overflow: auto;
     }
 
     .full-table {
-      width: 100%;
+      width: max-content;
+      min-width: 100%;
       font-size: 13px;
       border-collapse: collapse;
     }
@@ -397,6 +236,7 @@
       padding: 10px 14px;
       text-align: left;
       border-bottom: 1px solid #f3f4f6;
+      white-space: nowrap;
     }
 
     .full-table th {
@@ -510,6 +350,66 @@
       color: var(--text-primary);
       min-width: 50px;
       text-align: center;
+    }
+
+    /* 模式切换控件 */
+    .mode-control {
+      position: absolute;
+      bottom: 24px;
+      left: 160px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: var(--bg-white);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border);
+      padding: 4px;
+      z-index: 50;
+    }
+
+    .mode-btn {
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .mode-btn:hover {
+      background: #f3f4f6;
+      color: var(--text-primary);
+    }
+
+    .mode-btn.active {
+      background: #eef2ff;
+      color: var(--accent);
+    }
+
+    /* 框选框 */
+    .selection-box {
+      position: absolute;
+      border: 2px solid var(--accent);
+      background: rgba(99, 102, 241, 0.1);
+      pointer-events: none;
+      z-index: 200;
+      display: none;
+    }
+
+    .selection-box.active {
+      display: block;
+    }
+
+    /* 选中的卡片 */
+    .file-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
     }
 
     /* AI 对话面板 */
@@ -877,10 +777,23 @@
       <svg class="flow-lines" id="flowLines"></svg>
       <div class="canvas-content" id="canvasContent"></div>
       <svg id="alignmentLines"></svg>
+      <div class="selection-box" id="selectionBox"></div>
       <div class="zoom-control">
         <button class="zoom-btn" onclick="zoomOut()">−</button>
-        <span class="zoom-value" id="zoomLevel">43%</span>
+        <span class="zoom-value" id="zoomLevel">80%</span>
         <button class="zoom-btn" onclick="zoomIn()">+</button>
+      </div>
+      <div class="mode-control">
+        <button class="mode-btn active" id="dragModeBtn" onclick="setMode('drag')" title="拖拽模式">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
+          </svg>
+        </button>
+        <button class="mode-btn" id="selectModeBtn" onclick="setMode('select')" title="选择模式">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 2"/>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -920,7 +833,7 @@
         </div>
 
         <div class="message ai">
-          Got it! I've noted the relationship between <span class="mention" onclick="switchSheet('summary')">Summary</span> and <span class="mention" onclick="switchSheet('detail-a')">Detail sheets</span>.
+          Got it! I've noted the relationship between <span class="mention" onclick="chatSwitchSheet('summary')">Summary</span> and <span class="mention" onclick="chatSwitchSheet('detail-a')">Detail sheets</span>.
           <br><br>
           I calculated the totals for the <span class="mention" onclick="highlightColumn('amount')">Amount column</span>:
           <br>• Detail-A total: ¥398,500
@@ -975,13 +888,20 @@
 
   <script>
     // 画布状态
-    let scale = 0.43;
+    let scale = 0.8;  // 默认 80% 缩放，显示 full 模式
     let panX = 80;
     let panY = 60;
     let isDragging = false;
     let dragStartX = 0;
     let dragStartY = 0;
     let hoverTimer = null;
+    let canvasMode = 'drag'; // 'drag' or 'select'
+
+    // 框选状态
+    let isSelecting = false;
+    let selectStartX = 0;
+    let selectStartY = 0;
+    let selectedCards = new Set();
 
     const canvasArea = document.getElementById('canvasArea');
     const canvasContent = document.getElementById('canvasContent');
@@ -995,6 +915,9 @@
       { id: 'cleaned', name: 'cleaned_data.csv', type: 'csv', rows: 950, quality: 100, position: { x: 300, y: 120 } },
       { id: 'merged', name: 'merged_output.xlsx', type: 'excel', rows: 3400, quality: 98, position: { x: 540, y: 180 } }
     ];
+
+    // 堆叠状态（保留变量但不使用）
+    let expandedStacks = new Set();
 
     const flows = [
       { from: 'sales', to: 'cleaned', label: 'Clean', change: '-50 rows' },
@@ -1010,9 +933,7 @@
     }
 
     function getDisplayMode(scale) {
-      if (scale < 0.3) return 'mini';
-      if (scale < 0.5) return 'summary';
-      if (scale < 0.7) return 'preview';
+      if (scale < 0.7) return 'summary';
       return 'full';
     }
 
@@ -1034,47 +955,164 @@
       'merged': ['Merged']
     };
 
+    // 当前选中的 sheet
+    const activeSheets = {
+      'sales': 'Summary',
+      'orders': 'Orders',
+      'cleaned': 'Cleaned',
+      'merged': 'Merged'
+    };
+
+    // 每个 sheet 的表格数据
+    const sheetData = {
+      'sales': {
+        'Summary': {
+          headers: ['#', 'Category', 'Amount', 'Count', 'Date', 'Region', 'Manager', 'Status', 'Notes'],
+          rows: [
+            ['1', 'A', '400,000', '100', '2024-01-15', 'North', 'John Smith', 'Active', 'Q1 Report'],
+            ['2', 'B', '350,000', '80', '2024-01-15', 'South', 'Jane Doe', 'Active', 'Q1 Report'],
+            ['3', 'C', '250,000', '60', '2024-01-15', 'East', 'Bob Wilson', 'Active', 'Q1 Report'],
+            { row: ['4', 'A Return', '-1,500', '2', '2024-01-16', 'North', 'John Smith', 'Return', 'Customer complaint'], highlight: true, cellHighlight: 2 },
+            { row: ['5', 'B Return', '-800', '1', '2024-01-17', 'South', 'Jane Doe', 'Return', 'Defective item'], highlight: true, cellHighlight: 2 },
+            ['6', 'D', '180,000', '40', '2024-01-18', 'West', 'Alice Brown', 'Active', 'New category']
+          ],
+          highlightCol: 2
+        },
+        'Detail-A': {
+          headers: ['#', 'Product', 'Amount', 'Qty', 'Region', 'SKU', 'Supplier', 'Stock'],
+          rows: [
+            ['1', 'Widget A1', '150,000', '45', 'North', 'SKU-001', 'Supplier X', 'In Stock'],
+            ['2', 'Widget A2', '120,000', '30', 'South', 'SKU-002', 'Supplier Y', 'In Stock'],
+            ['3', 'Widget A3', '80,000', '15', 'East', 'SKU-003', 'Supplier Z', 'Low Stock'],
+            { row: ['4', 'Return A1', '-1,000', '1', 'North', 'SKU-001', 'Supplier X', 'Returned'], highlight: true, cellHighlight: 2 },
+            ['5', 'Widget A4', '50,000', '10', 'West', 'SKU-004', 'Supplier W', 'In Stock']
+          ],
+          highlightCol: null
+        },
+        'Detail-B': {
+          headers: ['#', 'Product', 'Amount', 'Qty', 'Region', 'SKU', 'Supplier', 'Stock'],
+          rows: [
+            ['1', 'Gadget B1', '200,000', '50', 'North', 'SKU-101', 'Supplier A', 'In Stock'],
+            ['2', 'Gadget B2', '100,000', '25', 'South', 'SKU-102', 'Supplier B', 'In Stock'],
+            { row: ['3', 'Return B1', '-500', '1', 'East', 'SKU-101', 'Supplier A', 'Returned'], highlight: true, cellHighlight: 2 },
+            ['4', 'Gadget B3', '50,000', '5', 'West', 'SKU-103', 'Supplier C', 'Low Stock']
+          ],
+          highlightCol: null
+        }
+      },
+      'orders': {
+        'Orders': {
+          headers: ['#', 'Order ID', 'Customer', 'Amount', 'Status', 'Ship Date', 'Tracking', 'Priority'],
+          rows: [
+            ['1', 'ORD-001', 'Acme Corp', '25,000', 'Completed', '2024-01-20', 'TRK-123456', 'High'],
+            ['2', 'ORD-002', 'Beta Inc', '18,500', 'Pending', '2024-01-22', 'TRK-123457', 'Normal'],
+            ['3', 'ORD-003', 'Gamma LLC', '32,000', 'Completed', '2024-01-21', 'TRK-123458', 'High']
+          ],
+          highlightCol: null
+        },
+        'Returns': {
+          headers: ['#', 'Return ID', 'Order ID', 'Amount', 'Reason', 'Status', 'Refund Date'],
+          rows: [
+            ['1', 'RET-001', 'ORD-015', '1,200', 'Defective', 'Approved', '2024-01-25'],
+            ['2', 'RET-002', 'ORD-028', '850', 'Wrong Item', 'Processing', '2024-01-26']
+          ],
+          highlightCol: null
+        }
+      },
+      'cleaned': {
+        'Cleaned': {
+          headers: ['#', 'Category', 'Amount', 'Count', 'Date'],
+          rows: [
+            ['1', 'A', '398,500', '98', '2024-01-15'],
+            ['2', 'B', '349,200', '79', '2024-01-15'],
+            ['3', 'C', '250,000', '60', '2024-01-15']
+          ],
+          highlightCol: null
+        }
+      },
+      'merged': {
+        'Merged': {
+          headers: ['#', 'Source', 'Category', 'Amount', 'Count'],
+          rows: [
+            ['1', 'Sales', 'A', '398,500', '98'],
+            ['2', 'Sales', 'B', '349,200', '79'],
+            ['3', 'Orders', 'Online', '75,500', '150'],
+            ['4', 'Orders', 'Store', '125,300', '280']
+          ],
+          highlightCol: null
+        }
+      }
+    };
+
+    // 切换 sheet
+    function switchSheet(fileId, sheetName) {
+      activeSheets[fileId] = sheetName;
+      renderCards();
+    }
+
     function renderCards() {
       const fontSize = getDynamicFontSize();
       const fontStyles = `font-size: ${fontSize}px; line-height: 1.4;`;
 
-      canvasContent.innerHTML = files.map(file => {
+      let html = '';
+
+      files.forEach(file => {
         const mode = getDisplayMode(scale);
         const pos = `left: ${file.position.x}px; top: ${file.position.y}px;`;
         const displayName = removeExtension(file.name);
         const sheets = fileSheets[file.id] || ['Sheet1'];
         const sheetsHTML = sheets.map(s => `<div class="sheet-item">${s}</div>`).join('');
 
-        if (mode === 'mini') {
-          return `<div class="file-card mini" id="card-${file.id}" style="${pos} ${fontStyles}" data-id="${file.id}" onmouseenter="onCardHover('${file.id}', event)" onmouseleave="onCardLeave('${file.id}')">
-            <div class="card-header"><div class="card-title">${displayName}</div></div>
-            <div class="sheet-list">${sheetsHTML}</div>
-          </div>`;
-        }
-
         if (mode === 'summary') {
-          return `<div class="file-card summary" id="card-${file.id}" style="${pos} ${fontStyles}" data-id="${file.id}" onmouseenter="onCardHover('${file.id}', event)" onmouseleave="onCardLeave('${file.id}')">
+          html += `<div class="file-card summary" id="card-${file.id}" style="${pos} ${fontStyles}" data-id="${file.id}" onmouseenter="onCardHover('${file.id}', event)" onmouseleave="onCardLeave('${file.id}')">
             <div class="card-header"><div class="card-title">${displayName}</div></div>
             <div class="sheet-list">${sheetsHTML}</div>
           </div>`;
-        }
+        } else {
+          // full 模式
+          const fileSheetList = fileSheets[file.id] || ['Sheet1'];
+          const activeSheet = activeSheets[file.id] || fileSheetList[0];
+          const currentSheetData = sheetData[file.id]?.[activeSheet] || {
+            headers: ['#', 'Column1', 'Column2'],
+            rows: [['1', 'Data1', 'Data2']]
+          };
 
-        if (mode === 'preview') {
-          return `<div class="file-card preview" id="card-${file.id}" style="${pos} ${fontStyles}" data-id="${file.id}" onmouseenter="onCardHover('${file.id}', event)" onmouseleave="onCardLeave('${file.id}')">
+          const tabsHTML = fileSheetList.map(s =>
+            `<button class="sheet-tab ${s === activeSheet ? 'active' : ''}" onclick="event.stopPropagation(); event.preventDefault(); switchSheet('${file.id}', '${s}')">${s}</button>`
+          ).join('');
+
+          const headersHTML = currentSheetData.headers.map((h, i) =>
+            `<th${i === currentSheetData.highlightCol ? ' class="highlight-col"' : ''}>${h}</th>`
+          ).join('');
+
+          const rowsHTML = currentSheetData.rows.map(rowData => {
+            const isArray = Array.isArray(rowData);
+            const row = isArray ? rowData : rowData.row;
+            const isHighlight = !isArray && rowData.highlight;
+            const cellHighlight = !isArray ? rowData.cellHighlight : -1;
+
+            const cellsHTML = row.map((cell, i) =>
+              `<td${i === cellHighlight ? ' class="highlight-cell"' : ''}>${cell}</td>`
+            ).join('');
+
+            return `<tr${isHighlight ? ' class="highlight-row"' : ''}>${cellsHTML}</tr>`;
+          }).join('');
+
+          html += `<div class="file-card full" id="card-${file.id}" style="${pos} ${fontStyles}" data-id="${file.id}" onmouseenter="onCardHover('${file.id}', event)" onmouseleave="onCardLeave('${file.id}')">
             <div class="card-header"><div class="card-title">${displayName}</div></div>
-            <div class="card-table"><table class="preview-table"><thead><tr><th>Category</th><th>Amount</th><th>Count</th></tr></thead>
-            <tbody><tr><td>A</td><td>400,000</td><td>100</td></tr><tr><td>B</td><td>350,000</td><td>80</td></tr><tr><td>C</td><td>250,000</td><td>60</td></tr><tr class="highlight-row"><td>A Return</td><td class="highlight-cell">-1,500</td><td>2</td></tr></tbody></table></div></div>`;
+            <div class="sheet-tabs">${tabsHTML}</div>
+            <div class="table-body"><table class="full-table"><thead><tr>${headersHTML}</tr></thead>
+            <tbody>${rowsHTML}</tbody></table></div></div>`;
         }
+      });
 
-        return `<div class="file-card full" id="card-${file.id}" style="${pos} ${fontStyles}" data-id="${file.id}" onmouseenter="onCardHover('${file.id}', event)" onmouseleave="onCardLeave('${file.id}')">
-          <div class="card-header"><div class="card-title">${displayName}</div></div>
-          <div class="sheet-tabs"><button class="sheet-tab active">Summary</button><button class="sheet-tab">Detail-A</button><button class="sheet-tab">Detail-B</button></div>
-          <div class="table-body"><table class="full-table"><thead><tr><th>#</th><th>Category</th><th class="highlight-col">Amount</th><th>Count</th><th>Date</th></tr></thead>
-          <tbody><tr><td>1</td><td>A</td><td>400,000</td><td>100</td><td>2024-01-15</td></tr><tr><td>2</td><td>B</td><td>350,000</td><td>80</td><td>2024-01-15</td></tr><tr><td>3</td><td>C</td><td>250,000</td><td>60</td><td>2024-01-15</td></tr><tr class="highlight-row"><td>4</td><td>A Return</td><td class="highlight-cell">-1,500</td><td>2</td><td>2024-01-16</td></tr><tr class="highlight-row"><td>5</td><td>B Return</td><td class="highlight-cell">-800</td><td>1</td><td>2024-01-17</td></tr><tr><td>6</td><td>D</td><td>180,000</td><td>40</td><td>2024-01-18</td></tr></tbody></table></div></div>`;
-      }).join('');
-
-      // 添加拖拽事件
+      canvasContent.innerHTML = html;
       setupCardDrag();
+    }
+
+    // 切换堆叠展开/收起（保留但不使用）
+    function toggleStack(stackKey) {
+      // 功能已移除
     }
 
     // 卡片拖拽相关变量
@@ -1348,9 +1386,7 @@
     // 获取卡片在当前缩放级别下的尺寸
     function getCardSize(mode) {
       const sizes = {
-        mini: { width: 156, height: 104 },
         summary: { width: 234, height: 130 },
-        preview: { width: 520, height: 286 },
         full: { width: 676, height: 442 }
       };
       return sizes[mode] || sizes.summary;
@@ -1438,34 +1474,150 @@
       if (card) card.classList.remove('hovering');
     }
 
+    // 设置画布模式
+    function setMode(mode) {
+      canvasMode = mode;
+      document.getElementById('dragModeBtn').classList.toggle('active', mode === 'drag');
+      document.getElementById('selectModeBtn').classList.toggle('active', mode === 'select');
+      canvasArea.style.cursor = mode === 'drag' ? 'grab' : 'crosshair';
+
+      // 清除选中状态
+      if (mode === 'drag') {
+        clearSelection();
+      }
+    }
+
+    // 清除选中
+    function clearSelection() {
+      selectedCards.clear();
+      document.querySelectorAll('.file-card.selected').forEach(card => {
+        card.classList.remove('selected');
+      });
+      const selectionBox = document.getElementById('selectionBox');
+      selectionBox.classList.remove('active');
+    }
+
+    // 更新框选框
+    function updateSelectionBox(e) {
+      const rect = canvasArea.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+
+      const x = Math.min(selectStartX, currentX);
+      const y = Math.min(selectStartY, currentY);
+      const width = Math.abs(currentX - selectStartX);
+      const height = Math.abs(currentY - selectStartY);
+
+      const selectionBox = document.getElementById('selectionBox');
+      selectionBox.style.left = x + 'px';
+      selectionBox.style.top = y + 'px';
+      selectionBox.style.width = width + 'px';
+      selectionBox.style.height = height + 'px';
+
+      // 检测哪些卡片在框选范围内
+      checkCardsInSelection(x, y, width, height);
+    }
+
+    // 检测卡片是否在框选范围内
+    function checkCardsInSelection(boxX, boxY, boxWidth, boxHeight) {
+      const cards = document.querySelectorAll('.file-card');
+
+      cards.forEach(card => {
+        const cardRect = card.getBoundingClientRect();
+        const canvasRect = canvasArea.getBoundingClientRect();
+
+        const cardX = cardRect.left - canvasRect.left;
+        const cardY = cardRect.top - canvasRect.top;
+        const cardWidth = cardRect.width;
+        const cardHeight = cardRect.height;
+
+        // 检测矩形相交
+        const intersects = !(
+          boxX > cardX + cardWidth ||
+          boxX + boxWidth < cardX ||
+          boxY > cardY + cardHeight ||
+          boxY + boxHeight < cardY
+        );
+
+        if (intersects) {
+          card.classList.add('selected');
+          selectedCards.add(card.dataset.id);
+        } else {
+          card.classList.remove('selected');
+          selectedCards.delete(card.dataset.id);
+        }
+      });
+    }
+
     function setupEventListeners() {
       canvasArea.addEventListener('wheel', (e) => {
-        e.preventDefault();
+        // Ctrl/Meta + 滚轮：始终允许缩放
         if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
           scale = Math.max(0.1, Math.min(1, scale - e.deltaY * 0.001));
-        } else {
-          panX -= e.deltaX;
-          panY -= e.deltaY;
+          updateTransform();
+          return;
         }
+
+        // 如果鼠标在表格区域，让表格自己处理滚动
+        const tableBody = e.target.closest('.table-body');
+        if (tableBody) {
+          return;
+        }
+
+        // 普通滚轮：平移白板
+        e.preventDefault();
+        panX -= e.deltaX;
+        panY -= e.deltaY;
         updateTransform();
       }, { passive: false });
 
       canvasArea.addEventListener('mousedown', (e) => {
-        if (e.target === canvasArea || e.target === flowLines) {
-          isDragging = true;
-          dragStartX = e.clientX - panX;
-          dragStartY = e.clientY - panY;
+        // 如果点击的是卡片或其内部元素，不处理
+        if (e.target.closest('.file-card')) return;
+
+        if (canvasMode === 'select') {
+          // 选择模式：开始框选
+          isSelecting = true;
+          const rect = canvasArea.getBoundingClientRect();
+          selectStartX = e.clientX - rect.left;
+          selectStartY = e.clientY - rect.top;
+
+          const selectionBox = document.getElementById('selectionBox');
+          selectionBox.style.left = selectStartX + 'px';
+          selectionBox.style.top = selectStartY + 'px';
+          selectionBox.style.width = '0px';
+          selectionBox.style.height = '0px';
+          selectionBox.classList.add('active');
+
+          clearSelection();
+        } else {
+          // 拖拽模式
+          if (e.target === canvasArea || e.target === flowLines || e.target === canvasContent) {
+            isDragging = true;
+            dragStartX = e.clientX - panX;
+            dragStartY = e.clientY - panY;
+          }
         }
       });
 
       document.addEventListener('mousemove', (e) => {
         if (isDragging) { panX = e.clientX - dragStartX; panY = e.clientY - dragStartY; updateTransform(); }
         if (isDraggingCard) { handleCardDrag(e); }
+        if (isSelecting) { updateSelectionBox(e); }
       });
 
       document.addEventListener('mouseup', () => {
         isDragging = false;
         endCardDrag();
+        if (isSelecting) {
+          isSelecting = false;
+          // 保持框选框可见以显示选中结果
+          setTimeout(() => {
+            const selectionBox = document.getElementById('selectionBox');
+            selectionBox.classList.remove('active');
+          }, 100);
+        }
       });
 
       canvasArea.addEventListener('dblclick', (e) => {
@@ -1536,7 +1688,7 @@
     function highlightCard(fileId) { focusOnCard(fileId); }
     function highlightColumn(colName) { document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight; }
     function highlightThis() { hideContextMenu(); addAIMessage('OK, I\'ve highlighted this area. What would you like to do with it?'); }
-    function switchSheet(sheetId) { addAIMessage(`Switched to ${sheetId === 'summary' ? 'Summary' : 'Detail-A'}.`); }
+    function chatSwitchSheet(sheetId) { addAIMessage(`Switched to ${sheetId === 'summary' ? 'Summary' : 'Detail-A'}.`); }
 
     function showContextMenu(x, y) { const menu = document.getElementById('contextMenu'); menu.style.left = x + 'px'; menu.style.top = y + 'px'; menu.classList.add('visible'); }
     function hideContextMenu() { document.getElementById('contextMenu').classList.remove('visible'); }
