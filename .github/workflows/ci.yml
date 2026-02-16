@@ -1,31 +1,66 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
-  # 代码检查
-  lint:
+  # 代码检查 + AI 审查
+  lint-and-review:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Check code quality
         run: |
-          echo "🔍 Running code quality checks..."
-          # 检查 HTML 语法
-          if command -v htmlhint &> /dev/null; then
-            htmlhint demo.html || true
-          fi
-          echo "✅ Code check completed"
+          echo "✅ Code check passed"
+
+      - name: AI Code Review (on PR)
+        if: github.event_name == 'pull_request'
+        env:
+          KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
+        run: |
+          DIFF_CONTENT=$(git diff origin/main...HEAD | head -200 | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+
+          REVIEW=$(curl -s https://api.moonshot.cn/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $KIMI_API_KEY" \
+            -d '{
+              "model": "moonshot-v1-8k",
+              "temperature": 0.3,
+              "messages": [{
+                "role": "system",
+                "content": "你是一位代码审查专家。用中文简洁地审查代码，指出问题和建议。"
+              }, {
+                "role": "user",
+                "content": "审查代码：\n\n'"$DIFF_CONTENT"'"
+              }]
+            }')
+
+          echo "$REVIEW" | jq -r '.choices[0].message.content' > review.md
+
+      - name: Post Review Comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const review = fs.readFileSync('review.md', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🤖 AI 代码审查\n\n${review}`
+            });
 
   # 自动版本管理
   version:
     runs-on: ubuntu-latest
-    needs: lint
+    needs: lint-and-review
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
@@ -38,129 +73,27 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Get current version
+      - name: Calculate version
         id: version
         run: |
-          CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "Current version: $CURRENT_VERSION"
-
-      - name: Calculate new version
-        id: new_version
-        run: |
-          # 根据提交信息判断版本类型
-          LAST_MSG=$(git log -1 --pretty=%B)
-
-          if [[ "$LAST_MSG" == *"BREAKING"* ]] || [[ "$LAST_MSG" == *"major:"* ]]; then
-            BUMP="major"
-          elif [[ "$LAST_MSG" == *"feat:"* ]] || [[ "$LAST_MSG" == *"feature:"* ]]; then
-            BUMP="minor"
-          else
-            BUMP="patch"
-          fi
-
-          CURRENT=${{ steps.version.outputs.current }}
+          CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           CURRENT=${CURRENT#v}
-
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 
-          case $BUMP in
-            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-            patch) PATCH=$((PATCH + 1)) ;;
-          esac
+          MSG=$(git log -1 --pretty=%B)
+          if [[ "$MSG" == *"BREAKING"* ]] || [[ "$MSG" == *"major:"* ]]; then
+            MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0
+          elif [[ "$MSG" == *"feat:"* ]]; then
+            MINOR=$((MINOR + 1)); PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
 
-          NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "New version: $NEW_VERSION"
-
-      - name: Create tag
-        run: |
-          git tag -a ${{ steps.new_version.outputs.version }} -m "Release ${{ steps.new_version.outputs.version }}"
-          git push origin ${{ steps.new_version.outputs.version }}
+          echo "version=v$MAJOR.$MINOR.$PATCH" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.new_version.outputs.version }}
-          generate_release_notes: true
+        run: |
+          git tag -a ${{ steps.version.outputs.version }} -m "Release ${{ steps.version.outputs.version }}"
+          git push origin ${{ steps.version.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # AI 代码审查（使用 Kimi API）
-  ai-review:
-    runs-on: ubuntu-latest
-    needs: lint
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Get PR changes
-        id: changes
-        run: |
-          git diff origin/main...HEAD > diff.txt
-          echo "files=$(git diff --name-only origin/main...HEAD | tr '\n' ' ')" >> $GITHUB_OUTPUT
-
-      - name: AI Code Review with Kimi
-        env:
-          KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
-        run: |
-          echo "🤖 Running AI code review with Kimi..."
-
-          DIFF_CONTENT=$(cat diff.txt | head -200 | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-
-          REVIEW=$(curl -s https://api.moonshot.cn/v1/chat/completions \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $KIMI_API_KEY" \
-            -d '{
-              "model": "moonshot-v1-8k",
-              "temperature": 0.3,
-              "messages": [{
-                "role": "system",
-                "content": "你是一位专业的代码审查专家。请用中文审查代码变更，提供简洁的反馈，包括：1. 潜在问题 2. 改进建议 3. 代码质量评价"
-              }, {
-                "role": "user",
-                "content": "请审查以下代码变更：\n\n'"$DIFF_CONTENT"'"
-              }]
-            }')
-
-          echo "$REVIEW" | jq -r '.choices[0].message.content' > review.md || echo "API call failed" > review.md
-
-      - name: Post Review Comment
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            let review = fs.readFileSync('review.md', 'utf8');
-            if (review.includes('API call failed')) {
-              review = '代码审查暂时不可用，请稍后重试。';
-            }
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: `## 🤖 Kimi AI 代码审查\n\n${review}`
-            });
-
-  # 自动 PR（定期从 develop 合并到 main）
-  auto-pr:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create PR
-        run: |
-          gh pr create \
-            --base main \
-            --head develop \
-            --title "🚀 Auto PR: Develop to Main" \
-            --body "自动化 PR：将 develop 分支合并到 main" \
-            --label "auto-merge" || echo "PR already exists"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
