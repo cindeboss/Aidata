@@ -16,8 +16,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check code quality
-        run: |
-          echo "✅ Code check passed"
+        run: echo "✅ Code check passed"
 
       - name: AI Code Review (on PR)
         if: github.event_name == 'pull_request'
@@ -25,22 +24,10 @@ jobs:
           KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
         run: |
           DIFF_CONTENT=$(git diff origin/main...HEAD | head -200 | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-
           REVIEW=$(curl -s https://api.moonshot.cn/v1/chat/completions \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $KIMI_API_KEY" \
-            -d '{
-              "model": "moonshot-v1-8k",
-              "temperature": 0.3,
-              "messages": [{
-                "role": "system",
-                "content": "你是一位代码审查专家。用中文简洁地审查代码，指出问题和建议。"
-              }, {
-                "role": "user",
-                "content": "审查代码：\n\n'"$DIFF_CONTENT"'"
-              }]
-            }')
-
+            -d '{"model":"moonshot-v1-8k","temperature":0.3,"messages":[{"role":"system","content":"你是代码审查专家，用中文简洁审查代码"},{"role":"user","content":"审查代码：\n\n'"$DIFF_CONTENT"'"}]}')
           echo "$REVIEW" | jq -r '.choices[0].message.content' > review.md
 
       - name: Post Review Comment
@@ -56,44 +43,3 @@ jobs:
               issue_number: context.issue.number,
               body: `## 🤖 AI 代码审查\n\n${review}`
             });
-
-  # 自动版本管理
-  version:
-    runs-on: ubuntu-latest
-    needs: lint-and-review
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Calculate version
-        id: version
-        run: |
-          CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          CURRENT=${CURRENT#v}
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-
-          MSG=$(git log -1 --pretty=%B)
-          if [[ "$MSG" == *"BREAKING"* ]] || [[ "$MSG" == *"major:"* ]]; then
-            MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0
-          elif [[ "$MSG" == *"feat:"* ]]; then
-            MINOR=$((MINOR + 1)); PATCH=0
-          else
-            PATCH=$((PATCH + 1))
-          fi
-
-          echo "version=v$MAJOR.$MINOR.$PATCH" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        run: |
-          git tag -a ${{ steps.version.outputs.version }} -m "Release ${{ steps.version.outputs.version }}"
-          git push origin ${{ steps.version.outputs.version }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
