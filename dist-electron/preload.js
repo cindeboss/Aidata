@@ -11,6 +11,8 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     writeFile: (filePath, data) => electron_1.ipcRenderer.invoke('file:write', filePath, data),
     // 应用信息
     getUserDataPath: () => electron_1.ipcRenderer.invoke('app:getUserDataPath'),
+    // AI API 调用
+    callAI: (url, options) => electron_1.ipcRenderer.invoke('ai:call', url, options),
     // 事件监听
     onFileDrop: (callback) => {
         electron_1.ipcRenderer.on('file-drop', (_event, paths) => callback(paths));

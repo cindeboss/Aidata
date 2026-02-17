@@ -40,9 +40,50 @@ const ZHIPU_CONFIG = {
   model: 'glm-4-flash',
 }
 
+// 检测是否在 Electron 环境中
+function isElectron(): boolean {
+  return typeof window !== 'undefined' && typeof (window as any).electronAPI?.callAI === 'function'
+}
+
+// 通过 Electron IPC 发起 API 请求（绑过 CORS）
+async function electronFetch(url: string, options: {
+  method: string
+  headers: Record<string, string>
+  body: string
+}): Promise<{ ok: boolean; status: number; data: any }> {
+  const result = await (window as any).electronAPI.callAI(url, options)
+
+  if (result.success) {
+    return { ok: true, status: result.status || 200, data: result.data }
+  } else {
+    return { ok: false, status: result.status || 500, data: { error: { message: result.error } } }
+  }
+}
+
+// 通用 API 调用函数
+async function apiCall(url: string, options: {
+  method: string
+  headers: Record<string, string>
+  body: string
+}): Promise<{ ok: boolean; status: number; data: any }> {
+  if (isElectron()) {
+    return electronFetch(url, options)
+  }
+
+  // 浏览器环境使用 fetch
+  const response = await fetch(url, {
+    method: options.method,
+    headers: options.headers,
+    body: options.body,
+  })
+
+  const data = await response.json().catch(() => ({}))
+  return { ok: response.ok, status: response.status, data }
+}
+
 // 调用 OpenAI 兼容 API（包括 Kimi）
 async function callOpenAICompatible(messages: AIMessage[], config: AIConfig, defaultBaseUrl: string, defaultModel: string): Promise<string> {
-  const response = await fetch(`${config.baseUrl || defaultBaseUrl}/v1/chat/completions`, {
+  const { ok, status, data } = await apiCall(`${config.baseUrl || defaultBaseUrl}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -56,18 +97,16 @@ async function callOpenAICompatible(messages: AIMessage[], config: AIConfig, def
     }),
   })
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(`AI API 错误: ${response.status} - ${errorData.error?.message || '未知错误'}`)
+  if (!ok) {
+    throw new Error(`AI API 错误: ${status} - ${data.error?.message || '未知错误'}`)
   }
 
-  const data = await response.json()
   return data.choices[0].message.content
 }
 
 // 调用智谱 GLM API
 async function callZhipu(messages: AIMessage[], config: AIConfig): Promise<string> {
-  const response = await fetch(`${config.baseUrl || ZHIPU_CONFIG.baseUrl}/chat/completions`, {
+  const { ok, status, data } = await apiCall(`${config.baseUrl || ZHIPU_CONFIG.baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -81,18 +120,16 @@ async function callZhipu(messages: AIMessage[], config: AIConfig): Promise<strin
     }),
   })
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(`智谱 API 错误: ${response.status} - ${errorData.error?.message || '未知错误'}`)
+  if (!ok) {
+    throw new Error(`智谱 API 错误: ${status} - ${data.error?.message || '未知错误'}`)
   }
 
-  const data = await response.json()
   return data.choices[0].message.content
 }
 
 // 调用 Anthropic API
 async function callAnthropic(messages: AIMessage[], config: AIConfig): Promise<string> {
-  const response = await fetch(`${config.baseUrl || 'https://api.anthropic.com'}/v1/messages`, {
+  const { ok, status, data } = await apiCall(`${config.baseUrl || 'https://api.anthropic.com'}/v1/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -107,18 +144,17 @@ async function callAnthropic(messages: AIMessage[], config: AIConfig): Promise<s
     }),
   })
 
-  if (!response.ok) {
-    throw new Error(`AI API 错误: ${response.status}`)
+  if (!ok) {
+    throw new Error(`AI API 错误: ${status} - ${data.error?.message || '未知错误'}`)
   }
 
-  const data = await response.json()
   return data.content[0].text
 }
 
 // 调用 Kimi Coding API (Anthropic 兼容)
 async function callKimiCoding(messages: AIMessage[], config: AIConfig): Promise<string> {
   const baseUrl = config.baseUrl || KIMI_CODING_CONFIG.baseUrl
-  const response = await fetch(`${baseUrl}/v1/messages`, {
+  const { ok, status, data } = await apiCall(`${baseUrl}/v1/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -133,12 +169,10 @@ async function callKimiCoding(messages: AIMessage[], config: AIConfig): Promise<
     }),
   })
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(`Kimi Coding API 错误: ${response.status} - ${errorData.error?.message || '未知错误'}`)
+  if (!ok) {
+    throw new Error(`Kimi Coding API 错误: ${status} - ${data.error?.message || '未知错误'}`)
   }
 
-  const data = await response.json()
   return data.content[0].text
 }
 

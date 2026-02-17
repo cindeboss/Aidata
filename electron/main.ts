@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain, dialog, FileFilter } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
+import * as https from 'https'
+import * as http from 'http'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -99,4 +101,53 @@ ipcMain.handle('file:write', async (event, filePath: string, data: Buffer | stri
 // 获取用户数据目录
 ipcMain.handle('app:getUserDataPath', () => {
   return app.getPath('userData')
+})
+
+// AI API 调用（绑过 CORS）
+ipcMain.handle('ai:call', async (event, url: string, options: {
+  method: string
+  headers: Record<string, string>
+  body: string
+}) => {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url)
+    const isHttps = urlObj.protocol === 'https:'
+    const lib = isHttps ? https : http
+
+    const reqOptions = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || (isHttps ? 443 : 80),
+      path: urlObj.pathname + urlObj.search,
+      method: options.method || 'POST',
+      headers: options.headers,
+    }
+
+    const req = lib.request(reqOptions, (res) => {
+      let data = ''
+      res.on('data', (chunk) => {
+        data += chunk
+      })
+      res.on('end', () => {
+        try {
+          const jsonData = JSON.parse(data)
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            resolve({ success: true, data: jsonData, status: res.statusCode })
+          } else {
+            resolve({ success: false, error: jsonData.error?.message || `HTTP ${res.statusCode}`, status: res.statusCode })
+          }
+        } catch {
+          resolve({ success: false, error: `HTTP ${res.statusCode}: ${data}`, status: res.statusCode })
+        }
+      })
+    })
+
+    req.on('error', (error) => {
+      resolve({ success: false, error: error.message })
+    })
+
+    if (options.body) {
+      req.write(options.body)
+    }
+    req.end()
+  })
 })

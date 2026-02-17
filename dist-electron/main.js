@@ -36,6 +36,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
+const https = __importStar(require("https"));
+const http = __importStar(require("http"));
 let mainWindow = null;
 function createWindow() {
     mainWindow = new electron_1.BrowserWindow({
@@ -124,4 +126,46 @@ electron_1.ipcMain.handle('file:write', async (event, filePath, data) => {
 // 获取用户数据目录
 electron_1.ipcMain.handle('app:getUserDataPath', () => {
     return electron_1.app.getPath('userData');
+});
+// AI API 调用（绑过 CORS）
+electron_1.ipcMain.handle('ai:call', async (event, url, options) => {
+    return new Promise((resolve, reject) => {
+        const urlObj = new URL(url);
+        const isHttps = urlObj.protocol === 'https:';
+        const lib = isHttps ? https : http;
+        const reqOptions = {
+            hostname: urlObj.hostname,
+            port: urlObj.port || (isHttps ? 443 : 80),
+            path: urlObj.pathname + urlObj.search,
+            method: options.method || 'POST',
+            headers: options.headers,
+        };
+        const req = lib.request(reqOptions, (res) => {
+            let data = '';
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+            res.on('end', () => {
+                try {
+                    const jsonData = JSON.parse(data);
+                    if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+                        resolve({ success: true, data: jsonData, status: res.statusCode });
+                    }
+                    else {
+                        resolve({ success: false, error: jsonData.error?.message || `HTTP ${res.statusCode}`, status: res.statusCode });
+                    }
+                }
+                catch {
+                    resolve({ success: false, error: `HTTP ${res.statusCode}: ${data}`, status: res.statusCode });
+                }
+            });
+        });
+        req.on('error', (error) => {
+            resolve({ success: false, error: error.message });
+        });
+        if (options.body) {
+            req.write(options.body);
+        }
+        req.end();
+    });
 });
