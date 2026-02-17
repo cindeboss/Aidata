@@ -11,6 +11,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
 
   const providers = [
     { id: 'local', name: '本地模式', description: '无需 API Key，使用模拟响应' },
+    { id: 'kimi-coding', name: 'Kimi Coding', description: 'Kimi 编程助手，API 端点: api.kimi.com/coding' },
     { id: 'kimi', name: 'Kimi (Moonshot)', description: '月之暗面 AI，API 端点: api.moonshot.cn' },
     { id: 'zhipu', name: '智谱 GLM', description: '智谱 AI，API 端点: open.bigmodel.cn' },
     { id: 'openai', name: 'OpenAI', description: 'GPT-4 等，API 端点: api.openai.com' },

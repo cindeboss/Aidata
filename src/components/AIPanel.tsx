@@ -117,6 +117,7 @@ export default function AIPanel() {
   const getProviderName = () => {
     const names: Record<string, string> = {
       local: '本地模式',
+      'kimi-coding': 'Kimi Coding',
       kimi: 'Kimi',
       zhipu: '智谱 GLM',
       openai: 'OpenAI',

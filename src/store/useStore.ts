@@ -5,7 +5,7 @@ import type { DataFile, DataFlow, Message, CanvasState } from '../types'
 
 // AI 配置类型
 export interface AIConfigStore {
-  provider: 'local' | 'kimi' | 'zhipu' | 'openai' | 'anthropic'
+  provider: 'local' | 'kimi-coding' | 'kimi' | 'zhipu' | 'openai' | 'anthropic'
   apiKey: string
 }
 

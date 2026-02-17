@@ -1,7 +1,7 @@
 // AI 服务 - 支持多种 AI 提供商
 
 export interface AIConfig {
-  provider: 'kimi' | 'zhipu' | 'openai' | 'anthropic' | 'local'
+  provider: 'kimi-coding' | 'kimi' | 'zhipu' | 'openai' | 'anthropic' | 'local'
   apiKey?: string
   model?: string
   baseUrl?: string
@@ -21,6 +21,12 @@ const SYSTEM_PROMPT = `你是 DataClean AI 的数据分析助手。你的任务�
 
 请用简洁、专业的语言回复，必要时使用 emoji 增加可读性。
 如果用户提到具体的文件或列，请使用 @ 提及，例如：@sales_data.xlsx 或 @Amount`
+
+// Kimi Coding 配置 (Anthropic 兼容)
+const KIMI_CODING_CONFIG = {
+  baseUrl: 'https://api.kimi.com/coding',
+  model: 'Kimi code',
+}
 
 // Kimi (Moonshot AI) 配置
 const KIMI_CONFIG = {
@@ -109,6 +115,33 @@ async function callAnthropic(messages: AIMessage[], config: AIConfig): Promise<s
   return data.content[0].text
 }
 
+// 调用 Kimi Coding API (Anthropic 兼容)
+async function callKimiCoding(messages: AIMessage[], config: AIConfig): Promise<string> {
+  const baseUrl = config.baseUrl || KIMI_CODING_CONFIG.baseUrl
+  const response = await fetch(`${baseUrl}/v1/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': config.apiKey || '',
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: config.model || KIMI_CODING_CONFIG.model,
+      system: SYSTEM_PROMPT,
+      messages: messages.filter((m) => m.role !== 'system'),
+      max_tokens: 4096,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`Kimi Coding API 错误: ${response.status} - ${errorData.error?.message || '未知错误'}`)
+  }
+
+  const data = await response.json()
+  return data.content[0].text
+}
+
 // 本地模拟响应（用于测试）
 function getLocalResponse(messages: AIMessage[]): string {
   const lastMessage = messages[messages.length - 1]?.content || ''
@@ -132,6 +165,12 @@ function getLocalResponse(messages: AIMessage[]): string {
 export async function callAI(messages: AIMessage[], config: AIConfig): Promise<string> {
   try {
     switch (config.provider) {
+      case 'kimi-coding':
+        if (!config.apiKey) {
+          return '请先配置 Kimi Coding API Key。你可以在设置中添加。'
+        }
+        return await callKimiCoding(messages, config)
+
       case 'kimi':
         if (!config.apiKey) {
           return '请先配置 Kimi API Key。你可以在设置中添加。'
