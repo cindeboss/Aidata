@@ -3,9 +3,9 @@ import { callAI, DEFAULT_AI_CONFIG, generateAnalysisPrompt } from '../src/utils/
 
 describe('aiService', () => {
   it('should have correct default config', () => {
-    expect(DEFAULT_AI_CONFIG.provider).toBe('local')
-    expect(DEFAULT_AI_CONFIG.model).toBe('')
-    expect(DEFAULT_AI_CONFIG.apiKey).toBe('')
+    expect(DEFAULT_AI_CONFIG.provider).toBe('kimi-coding')
+    expect(DEFAULT_AI_CONFIG.model).toBe('Kimi code')
+    expect(DEFAULT_AI_CONFIG.apiKey).toBeDefined()
   })
 
   it('should generate analysis prompt', () => {

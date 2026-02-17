@@ -184,8 +184,8 @@ export const useStore = create<AppStore>()(
 
       // AI 配置
       aiConfig: {
-        provider: 'local',
-        apiKey: '',
+        provider: 'kimi-coding',
+        apiKey: 'sk-kimi-oWomiYWYTfuvLbF2ggJp9Cp8BkiXszSp7hIh5ArVyoiAsdrwnbN7knQ1IW8dZk08',
       },
       setAIConfig: (config) => {
         set((state) => ({
