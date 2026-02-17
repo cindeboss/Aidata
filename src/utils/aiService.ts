@@ -189,9 +189,10 @@ ${data.sampleRows.map((row) => row.join(' | ')).join('\n')}
 3. 清洗建议`
 }
 
-// 默认 AI 配置（使用 Kimi）
+// 默认 AI 配置（使用本地模式，无需 API Key）
+// 用户可以在设置中配置自己的 Kimi/智谱/OpenAI API Key
 export const DEFAULT_AI_CONFIG: AIConfig = {
-  provider: 'kimi',
-  apiKey: 'sk-kimi-oWomiYWYTfuvLbF2ggJp9Cp8BkiXszSp7hIh5ArVyoiAsdrwnbN7knQ1IW8dZk08',
-  model: 'moonshot-v1-8k',
+  provider: 'local',
+  apiKey: '',
+  model: '',
 }
