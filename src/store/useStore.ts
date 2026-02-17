@@ -3,6 +3,12 @@ import { persist } from 'zustand/middleware'
 import { v4 as uuid } from 'uuid'
 import type { DataFile, DataFlow, Message, CanvasState } from '../types'
 
+// AI 配置类型
+export interface AIConfigStore {
+  provider: 'local' | 'kimi' | 'zhipu' | 'openai' | 'anthropic'
+  apiKey: string
+}
+
 interface AppStore {
   // 文件
   files: DataFile[]
@@ -39,6 +45,10 @@ interface AppStore {
   // 错误
   error: string | null
   setError: (error: string | null) => void
+
+  // AI 配置
+  aiConfig: AIConfigStore
+  setAIConfig: (config: Partial<AIConfigStore>) => void
 }
 
 export const useStore = create<AppStore>()(
@@ -171,6 +181,17 @@ export const useStore = create<AppStore>()(
       setError: (error) => {
         set({ error })
       },
+
+      // AI 配置
+      aiConfig: {
+        provider: 'local',
+        apiKey: '',
+      },
+      setAIConfig: (config) => {
+        set((state) => ({
+          aiConfig: { ...state.aiConfig, ...config },
+        }))
+      },
     }),
     {
       name: 'dataclean-ai-storage',
@@ -178,6 +199,7 @@ export const useStore = create<AppStore>()(
         files: state.files,
         flows: state.flows,
         canvas: state.canvas,
+        aiConfig: state.aiConfig,
       }),
     }
   )
