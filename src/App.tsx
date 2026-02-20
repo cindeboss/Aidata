@@ -24,10 +24,12 @@ function App() {
 
   const handleDrop = useCallback(
     async (e: React.DragEvent) => {
+      console.log('[App] handleDrop triggered')
       e.preventDefault()
       setIsDragging(false)
 
       const files = Array.from(e.dataTransfer.files)
+      console.log('[App] files dropped:', files.length)
       const validFiles = files.filter(
         (f) =>
           f.name.endsWith('.csv') ||
@@ -48,14 +50,50 @@ function App() {
           const result = await parseFile(file)
           const fileCount = useStore.getState().files.length
 
+          // 如果是 Electron 环境，保存文件到临时目录以便后续读取完整数据
+          let filePath: string | undefined
+          const electronAPI = (window as any).electronAPI
+          console.log('[App] electronAPI:', electronAPI)
+          console.log('[App] saveTempFile:', electronAPI?.saveTempFile)
+          if (electronAPI?.saveTempFile) {
+            try {
+              const arrayBuffer = await file.arrayBuffer()
+              console.log('[App] Saving temp file:', file.name, arrayBuffer.byteLength)
+              const tempResult = await electronAPI.saveTempFile(file.name, arrayBuffer)
+              console.log('[App] Temp result:', tempResult)
+              if (tempResult.success) {
+                filePath = tempResult.path
+              }
+            } catch (err) {
+              console.error('[App] saveTempFile error:', err)
+            }
+          }
+
+          // 检查是否为重复文件
+          const existingFile = useStore.getState().files.find(f => f.path === filePath)
+          if (existingFile) {
+            addMessage({
+              role: 'assistant',
+              content: `文件 "${file.name}" 已存在于画布上，未重复添加。`
+            })
+            continue
+          }
+
+          // 计算新文件位置，使用网格布局避免重叠
+          const gridSize = 550 // 文件宽度 + 间距
+          const cols = 3 // 每行3个文件
+          const row = Math.floor(fileCount / cols)
+          const col = fileCount % cols
+
           addFile({
             name: file.name,
             type: result.type,
+            path: filePath,
             sheets: result.sheets,
             activeSheet: result.sheets[0]?.name || 'Sheet1',
             position: {
-              x: 60 + fileCount * 30,
-              y: 60 + fileCount * 30,
+              x: 100 + col * gridSize,
+              y: 100 + row * 400,
             },
             size: {
               width: result.type === 'excel' ? 676 : 400,

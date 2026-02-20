@@ -3,6 +3,7 @@ import * as path from 'path'
 import * as fs from 'fs'
 import * as https from 'https'
 import * as http from 'http'
+import * as XLSX from 'xlsx'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -22,8 +23,8 @@ function createWindow() {
     backgroundColor: '#f8f9fa',
   })
 
-  // 开发环境加载 Vite 开发服务器
-  if (process.env.NODE_ENV === 'development') {
+  // 开发环境加载 Vite 开发服务器，生产环境加载打包文件
+  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
     mainWindow.loadURL('http://localhost:5173')
     mainWindow.webContents.openDevTools()
   } else {
@@ -150,4 +151,116 @@ ipcMain.handle('ai:call', async (event, url: string, options: {
     }
     req.end()
   })
+})
+
+// 读取 Excel sheet 的完整数据
+// 支持传入 headerRow 指定表头行（0-based），不传入则自动推断
+ipcMain.handle('excel:readSheet', async (event, filePath: string, sheetName: string, headerRow?: number) => {
+  try {
+    const workbook = XLSX.readFile(filePath)
+    const worksheet = workbook.Sheets[sheetName]
+    if (!worksheet) {
+      return { success: false, error: `Sheet "${sheetName}" not found` }
+    }
+
+    // 读取为 JSON，获取完整数据
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null }) as any[][]
+
+    // 确定表头行
+    let actualHeaderRow = headerRow ?? 0
+
+    // 如果没有指定 headerRow，尝试自动推断（找第一个有多个非空值的行）
+    if (headerRow === undefined) {
+      for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
+        const row = jsonData[i]
+        if (row) {
+          const nonEmptyCount = row.filter(c => c !== null && c !== undefined && c !== '').length
+          // 如果一行有超过 3 个非空值，认为是表头
+          if (nonEmptyCount >= 3) {
+            actualHeaderRow = i
+            break
+          }
+        }
+      }
+    }
+
+    // 获取表头
+    const headers = (jsonData[actualHeaderRow] || []).map((h: any) => String(h || '').trim())
+
+    // 数据行（从表头行的下一行开始）
+    const rows = jsonData.slice(actualHeaderRow + 1).map((row: any) => {
+      const rowData: Record<string, any> = {}
+      headers.forEach((h: string, i: number) => {
+        rowData[h] = row[i] ?? null
+      })
+      return rowData
+    }).filter((row: any) => Object.values(row).some(v => v !== null))
+
+    return {
+      success: true,
+      data: {
+        headers,
+        rows,
+        rowCount: rows.length,
+        headerRow: actualHeaderRow  // 返回实际使用的表头行
+      }
+    }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// 导出数据为 JSON 文件
+ipcMain.handle('data:exportJSON', async (event, data: any[], filePath: string) => {
+  try {
+    // 确保目录存在
+    const dir = path.dirname(filePath)
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
+    }
+    const jsonContent = JSON.stringify(data, null, 2)
+    fs.writeFileSync(filePath, jsonContent, 'utf-8')
+    return { success: true, path: filePath }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// 导出数据为 CSV 文件
+ipcMain.handle('data:exportCSV', async (event, headers: string[], rows: any[][], filePath: string) => {
+  try {
+    // 确保目录存在
+    const dir = path.dirname(filePath)
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
+    }
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    const csvContent = XLSX.utils.sheet_to_csv(worksheet)
+    fs.writeFileSync(filePath, csvContent, 'utf-8')
+    return { success: true, path: filePath }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+// 保存上传的文件到临时目录
+ipcMain.handle('file:saveTemp', async (event, fileName: string, buffer: ArrayBuffer) => {
+  try {
+    const tempDir = path.join(app.getPath('userData'), 'temp')
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true })
+    }
+    const filePath = path.join(tempDir, `${Date.now()}_${fileName}`)
+    fs.writeFileSync(filePath, Buffer.from(buffer))
+
+    // 记录调试日志
+    const logPath = path.join(app.getPath('userData'), 'debug.log')
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] saveTemp: ${fileName} -> ${filePath}\n`)
+
+    return { success: true, path: filePath }
+  } catch (error) {
+    const logPath = path.join(app.getPath('userData'), 'debug.log')
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] saveTemp ERROR: ${(error as Error).message}\n`)
+    return { success: false, error: (error as Error).message }
+  }
 })

@@ -85,6 +85,15 @@ body {
   }
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* 拖拽指示器 */
 .drop-indicator {
   position: fixed;

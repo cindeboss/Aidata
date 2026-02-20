@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx'
 import Papa from 'papaparse'
-import type { SheetInfo, ColumnType } from '../types'
+import type { SheetInfo, ColumnType, RawSheetData, CellData, MergeRange } from '../types'
 
 interface ParseResult {
   type: 'csv' | 'excel' | 'json'
@@ -85,6 +85,7 @@ async function parseCSV(file: File): Promise<ParseResult> {
             headers: headers.map((h) => String(h || '')),
             rowCount: rows.length,
             columnTypes: headers.map((_, i) => detectColumnType(rows.map((r) => r[i]))),
+            sampleRows: rows.slice(0, 50), // 存储前50行供卡片滚动查看
           },
         ]
 
@@ -109,17 +110,33 @@ async function parseExcel(file: File): Promise<ParseResult> {
         const data = new Uint8Array(e.target?.result as ArrayBuffer)
         const workbook = XLSX.read(data, { type: 'array' })
 
+        // 获取隐藏状态映射
+        const hiddenSheets = new Set<string>()
+        try {
+          if (workbook.Workbook?.Sheets) {
+            workbook.Workbook.Sheets.forEach((sheet: any, index: number) => {
+              if (sheet.Hidden > 0 && workbook.SheetNames[index]) {
+                hiddenSheets.add(workbook.SheetNames[index])
+              }
+            })
+          }
+        } catch {
+          // 忽略隐藏状态检测错误
+        }
+
         const sheets: SheetInfo[] = []
         let totalRows = 0
         let totalQuality = 0
 
         for (const sheetName of workbook.SheetNames) {
           const worksheet = workbook.Sheets[sheetName]
+          if (!worksheet) continue
+
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][]
 
           if (jsonData.length === 0) continue
 
-          const headers = (jsonData[0] as any[]).map((h) => String(h || `Column ${jsonData[0].indexOf(h) + 1}`))
+          const headers = (jsonData[0] as any[]).map((h, i) => String(h ?? `Column ${i + 1}`))
           const rows = jsonData.slice(1)
 
           sheets.push({
@@ -127,6 +144,8 @@ async function parseExcel(file: File): Promise<ParseResult> {
             headers,
             rowCount: rows.length,
             columnTypes: headers.map((_, i) => detectColumnType(rows.map((r) => r[i]))),
+            sampleRows: rows.slice(0, 50), // 存储前50行供卡片滚动查看
+            hidden: hiddenSheets.has(sheetName),
           })
 
           totalRows += rows.length
@@ -193,6 +212,7 @@ async function parseJSON(file: File): Promise<ParseResult> {
             headers,
             rowCount: rows.length,
             columnTypes: headers.map((_, i) => detectColumnType(rows.map((r: any[]) => r[i]))),
+            sampleRows: rows.slice(0, 50), // 存储前50行供卡片滚动查看
           },
         ]
 
@@ -226,4 +246,121 @@ export async function parseFile(file: File): Promise<ParseResult> {
     default:
       throw new Error(`不支持的文件格式: ${extension}`)
   }
+}
+
+// 提取原始 Sheet 数据（用于 AI 分析）
+export function extractRawSheetData(worksheet: XLSX.WorkSheet, maxRows: number = 20): RawSheetData {
+  const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
+  const maxRow = Math.min(range.e.r + 1, maxRows)
+  const maxCol = range.e.c + 1
+
+  // 提取单元格数据
+  const cells: CellData[][] = []
+  for (let r = 0; r < maxRow; r++) {
+    const row: CellData[] = []
+    for (let c = 0; c < maxCol; c++) {
+      const cellAddress = XLSX.utils.encode_cell({ r, c })
+      const cell = worksheet[cellAddress]
+      row.push({
+        value: cell?.v ?? null,
+        formula: cell?.f,
+      })
+    }
+    cells.push(row)
+  }
+
+  // 提取合并单元格信息
+  const merges: MergeRange[] = (worksheet['!merges'] || []).map((m) => ({
+    s: { r: m.s.r, c: m.s.c },
+    e: { r: m.e.r, c: m.e.c },
+  }))
+
+  // 标记合并单元格
+  merges.forEach((merge, mergeId) => {
+    for (let r = merge.s.r; r <= merge.e.r; r++) {
+      for (let c = merge.s.c; c <= merge.e.c; c++) {
+        if (cells[r] && cells[r][c]) {
+          cells[r][c].mergeId = String(mergeId)
+        }
+      }
+    }
+  })
+
+  return { cells, merges }
+}
+
+// 解析 Excel 文件并返回原始数据（用于分析）
+export async function parseExcelWithRawData(file: File): Promise<ParseResult & { rawData?: Map<string, RawSheetData> }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const workbook = XLSX.read(data, { type: 'array' })
+
+        const hiddenSheets = new Set<string>()
+        try {
+          if (workbook.Workbook?.Sheets) {
+            workbook.Workbook.Sheets.forEach((sheet: any, index: number) => {
+              if (sheet.Hidden > 0 && workbook.SheetNames[index]) {
+                hiddenSheets.add(workbook.SheetNames[index])
+              }
+            })
+          }
+        } catch {
+          // 忽略隐藏状态检测错误
+        }
+
+        const sheets: SheetInfo[] = []
+        const rawDataMap = new Map<string, RawSheetData>()
+        let totalRows = 0
+        let totalQuality = 0
+
+        for (const sheetName of workbook.SheetNames) {
+          const worksheet = workbook.Sheets[sheetName]
+          if (!worksheet) continue
+
+          // 提取原始数据用于 AI 分析
+          const rawData = extractRawSheetData(worksheet, 20)
+          rawDataMap.set(sheetName, rawData)
+
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][]
+          if (jsonData.length === 0) continue
+
+          const headers = (jsonData[0] as any[]).map((h, i) => String(h ?? `Column ${i + 1}`))
+          const rows = jsonData.slice(1)
+
+          sheets.push({
+            name: sheetName,
+            headers,
+            rowCount: rows.length,
+            columnTypes: headers.map((_, i) => detectColumnType(rows.map((r) => r[i]))),
+            sampleRows: rows.slice(0, 50),
+            hidden: hiddenSheets.has(sheetName),
+            rawData,
+          })
+
+          totalRows += rows.length
+          totalQuality += calculateQuality(rows)
+        }
+
+        if (sheets.length === 0) {
+          reject(new Error('Excel 文件没有有效的工作表'))
+          return
+        }
+
+        resolve({
+          type: 'excel',
+          sheets,
+          rowCount: totalRows,
+          quality: Math.round(totalQuality / sheets.length),
+          rawData: rawDataMap,
+        })
+      } catch (error) {
+        reject(error)
+      }
+    }
+    reader.onerror = () => reject(new Error('读取文件失败'))
+    reader.readAsArrayBuffer(file)
+  })
 }

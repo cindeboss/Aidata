@@ -5,7 +5,7 @@ describe('aiService', () => {
   it('should have correct default config', () => {
     expect(DEFAULT_AI_CONFIG.provider).toBe('kimi-coding')
     expect(DEFAULT_AI_CONFIG.model).toBe('Kimi code')
-    expect(DEFAULT_AI_CONFIG.apiKey).toBeDefined()
+    expect(DEFAULT_AI_CONFIG.apiKey).toBe('')
   })
 
   it('should generate analysis prompt', () => {
@@ -28,6 +28,8 @@ describe('aiService', () => {
       { provider: 'local' }
     )
 
+    // 新格式包含本地模式提示
+    expect(response).toContain('【本地模式】')
     expect(response).toContain('数据质量问题')
   })
 
