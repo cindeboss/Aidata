@@ -8,6 +8,7 @@ env/
 
 # Build outputs
 dist/
+dist-electron/
 build/
 *.egg-info/
 
@@ -34,3 +35,6 @@ coverage/
 *.tmp
 *.temp
 .cache/
+
+# Test artifacts
+test-temp/
